@@ -8,7 +8,7 @@
 # https://github.com/mvdklip/hewalex-geco-protocol
 
 """
-<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.1.0">
+<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.2.0">
     <description>
         <h2>Hewalex Plugin</h2><br/>
         <h3>Features</h3>
@@ -19,6 +19,12 @@
     <params>
         <param field="Address" label="IP Address" width="200px" required="true"/>
         <param field="Port" label="Port" width="30px" required="true" default="8899"/>
+        <param field="Mode2" label="PCWU Mode" width="100px" required="true">
+            <options>
+                <option label="Eavesdropping" value="1" default="true"/>
+                <option label="Direct comms" value="2"/>
+            </options>
+        </param>
         <param field="Mode3" label="Query interval" width="75px" required="true">
             <options>
                 <option label="15 sec" value="3"/>
@@ -53,6 +59,7 @@ class BasePlugin:
     lastPolled = 0
     baseUrl = None
     maxAttempts = 3
+    pcwuMode = None
 
     # Controller (Master)
     conHardId = 1
@@ -84,6 +91,9 @@ class BasePlugin:
         self.baseUrl = "socket://%s:%s" % (Parameters["Address"], Parameters["Port"])
         Domoticz.Debug("Base URL is set to %s" % self.baseUrl)
 
+        self.pcwuMode = int(Parameters["Mode2"])
+        Domoticz.Debug("PCWU mode is set to %d" % self.pcwuMode)
+
         Domoticz.Heartbeat(5)
 
     def onStop(self):
@@ -91,8 +101,8 @@ class BasePlugin:
 
     def onMessagePCWU(self, obj, h, sh, m):
         Domoticz.Debug("onMessagePCWU called")
-        if sh["FNC"] == 0x60:
-            mp = obj.parseX60RestMessage(sh["RestMessage"])
+        if (self.pcwuMode == 1 and sh["FNC"] == 0x60) or (self.pcwuMode == 2 and sh["FNC"] == 0x50):
+            mp = obj.parseRegisters(sh["RestMessage"])
             Devices[1].Update(nValue=0, sValue=str(mp['T1']))
             Devices[2].Update(nValue=0, sValue=str(mp['T2']))
             Devices[3].Update(nValue=0, sValue=str(mp['T3']))
@@ -114,7 +124,10 @@ class BasePlugin:
                 try:
                     ser = serial.serial_for_url(self.baseUrl)
                     pcwu = PCWU(self.conHardId, self.conSoftId, self.devHardId, self.devSoftId, self.onMessagePCWU)
-                    pcwu.eavesDrop(ser, 1)
+                    if (self.pcwuMode == 1):
+                        pcwu.eavesDrop(ser, 1)
+                    elif (self.pcwuMode == 2):
+                        pcwu.requestRegisters(ser, 92, 120)
                     ser.close()
                 except Exception as e:
                     Domoticz.Log("Exception from %s; %s" % (self.baseUrl, e))

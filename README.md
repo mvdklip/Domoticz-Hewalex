@@ -11,9 +11,7 @@ Not implemented yet.
 
 ### Heat pumps (PCWU)
 
-RS485 to Wi-Fi device setup and eavesdropping on the communication between the G-426 controller and the PCWU.
-
-https://github.com/mvdklip/hewalex-geco-protocol/tree/main/docs/PCWU
+RS485 to Wi-Fi device setup and either eavesdropping on the communication between the G-426 controller and the PCWU or communicating directly to the PCWU over a dedicated RS485 port. See https://github.com/mvdklip/hewalex-geco-protocol/tree/main/docs/PCWU for more information.
 
 ## Installation
 
@@ -33,9 +31,7 @@ Afterwards navigate to the Devices page and enable the newly created devices.
 
 ## Known issues
 
-This plugin is work in progress. Currently it only supports heat pumps by eavesdropping on the communication between the G-426 controller and the PCWU.
-
-In the future it will also support direct communication to both solar and heat pumps.
+This plugin is work in progress. Currently it only reads temperature registers for heat pumps. In the future it will also support solar pumps and allow control over the connected pump.
 
 ## Updating
 
@@ -51,6 +47,7 @@ sudo /etc/init.d/domoticz.sh restart
 | :--- | :--- |
 | **IP address** | IP of the RS485 to Wi-Fi device eg. 192.168.1.231 |
 | **Port** | Port of the RS485 to Wi-Fi device eg. 8899 |
+| **PCWU Mode** | Eavesdropping or Direct comms |
 | **Query interval** | how often is data retrieved |
 | **Debug** | show debug logging |
 

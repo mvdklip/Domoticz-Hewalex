@@ -82,7 +82,7 @@ class PCWU:
             w = w - 0x10000
         return w / 10.0
 
-    def parseX60RestMessage(self, m):
+    def parseRegisters(self, m):
         temp = {
             'T1': 8,
             'T2': 10,
@@ -166,7 +166,7 @@ class PCWU:
     #
     # 1. The pump sends a query to the display to read 20 registers starting from address 100.
     # 2. The display responds, it always seems to be the same. It's hard to say if there is a display model or a serial number.
-    # 3. The pump sends a record of 104 registers starting at address 120. This is the main message, there are temperatures there. After this message there is a long pause (which is quite a large part of the 140ms for a series of messages), probably the display is not too fast to write it to memory and it takes longer.  
+    # 3. The pump sends a record of 92 or 104 registers starting at address 120. This is the main message, there are temperatures there. After this message there is a long pause (which is quite a large part of the 140ms for a series of messages), probably the display is not too fast to write it to memory and it takes longer. The exact number of records depends on the model and firmware of the pump.
     # 4. The display replies with the standard message 0x70 that the bytes have been written successfully.
     # 5. The pump requests to read 4 bytes starting from address 252.
     # 6. The display responds and returns 4 bytes. By default they are: 10000000 and they mean that the display is working normally, there are no changes. The value 08000000 means that the display is turned off. However, the value 11000000 means that the user has changed a parameter in the menu, at this point the communication scheme is different, described below.
@@ -204,3 +204,22 @@ class PCWU:
 
             # process
             self.processAllMessages(s + m)
+
+    def createRegistersRequest(self, SlaveHardId, MasterHardId, SlaveSoftId, MasterSoftId, num, start):
+        header = [0x69, SlaveHardId, MasterHardId, 0x84, 0, 0]
+        payload = [(SlaveSoftId & 0xff), ((SlaveSoftId >> 8) & 0xff), (MasterSoftId & 0xff), ((MasterSoftId >> 8) & 0xff), 0x40, 0x80, 0, num, start, 0]
+        calcCrc16 = crc16(payload)
+        payload.append((calcCrc16 >> 8) & 0xff)
+        payload.append(calcCrc16 & 0xff)
+        header.append(len(payload))
+        calcCrc8 = crc8(header)
+        header.append(calcCrc8)
+        return bytearray(header + payload)
+
+    def requestRegisters(self, ser, num, start):
+        m = self.createRegistersRequest(self.devHardId, self.conHardId, self.devSoftId, self.conSoftId, num, start)
+        ser.flushInput()
+        ser.timeout = 0.4
+        ser.write(m)
+        r = ser.read(1000)
+        self.processAllMessages(r)
