@@ -8,7 +8,7 @@
 # https://github.com/mvdklip/hewalex-geco-protocol
 
 """
-<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.3.0">
+<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.3.1">
     <description>
         <h2>Hewalex Plugin</h2><br/>
         <h3>Features</h3>
@@ -29,9 +29,9 @@
             <options>
                 <option label="15 sec" value="3"/>
                 <option label="30 sec" value="6"/>
-                <option label="1 min" value="12"/>
+                <option label="1 min" value="12" default="true"/>
                 <option label="3 min" value="36"/>
-                <option label="5 min" value="60" default="true"/>
+                <option label="5 min" value="60"/>
                 <option label="10 min" value="120"/>
                 <option label="30 min" value="360"/>
                 <option label="60 min" value="720"/>
@@ -111,14 +111,18 @@ class BasePlugin:
                 Devices[2].Update(nValue=0, sValue=str(mp['T2']))
             if 'T3' in mp:
                 Devices[3].Update(nValue=0, sValue=str(mp['T3']))
+            if 'WaitingStatus' in mp:
+                newValue = int(mp['WaitingStatus'] != 2)
+                if newValue != Devices[4].nValue:
+                    Devices[4].Update(nValue=newValue, sValue="")
 
     def onCommand(self, Unit, Command, Level, Hue):
         Domoticz.Debug("onCommand called for unit %d with command %s, level %s." % (Unit, Command, Level))
         if (Unit == 4) and (Command == "On"):
             SendCommand(self, 'enable')
-            Devices[Unit].Update(nValue=1, sValue="")   # TODO - make sure that device is actually turned on
+            Devices[Unit].Update(nValue=1, sValue="")   # TODO - check if device is actually switched on
         elif (Unit == 4) and (Command == "Off"):
-            SendCommand(self, 'disable')                # TODO - ...and off
+            SendCommand(self, 'disable')                # TODO - ... or off
             Devices[Unit].Update(nValue=0, sValue="")
         return True
 

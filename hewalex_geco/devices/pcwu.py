@@ -109,7 +109,7 @@ class PCWU:
             ret["IsManual"] = self.getWord(m[74:])
             ret["unknown1"] = hex(self.getWord(m[76:]))
             ret["EV1"] = self.getWord(m[78:]) #unknown4
-            ret["unknown2"] = hex(m[82])
+            ret["WaitingStatus"] = self.getWord(m[82:])
             ret["unknown6"] = hex(self.getWord(m[86:]))
             ret["unknown7"] = hex(self.getWord(m[90:]))
 
