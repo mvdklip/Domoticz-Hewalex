@@ -8,7 +8,7 @@
 # https://github.com/mvdklip/hewalex-geco-protocol
 
 """
-<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.2.0">
+<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.3.0">
     <description>
         <h2>Hewalex Plugin</h2><br/>
         <h3>Features</h3>
@@ -19,10 +19,10 @@
     <params>
         <param field="Address" label="IP Address" width="200px" required="true"/>
         <param field="Port" label="Port" width="30px" required="true" default="8899"/>
-        <param field="Mode2" label="PCWU Mode" width="100px" required="true">
+        <param field="Mode2" label="Device & Mode" width="200px" required="true">
             <options>
-                <option label="Eavesdropping" value="1" default="true"/>
-                <option label="Direct comms" value="2"/>
+                <option label="PCWU - Eavesdropping" value="1" default="true"/>
+                <option label="PCWU - Direct comms" value="2"/>
             </options>
         </param>
         <param field="Mode3" label="Query interval" width="75px" required="true">
@@ -59,7 +59,7 @@ class BasePlugin:
     lastPolled = 0
     baseUrl = None
     maxAttempts = 3
-    pcwuMode = None
+    devMode = None
 
     # Controller (Master)
     conHardId = 1
@@ -80,19 +80,21 @@ class BasePlugin:
             Domoticz.Debugging(0)
 
         if len(Devices) < 1:
-            Domoticz.Device(Name="PCWU T1 (ambient)", Unit=1, TypeName='Temperature').Create()
+            Domoticz.Device(Name="T1 (ambient)", Unit=1, TypeName='Temperature').Create()
         if len(Devices) < 2:
-            Domoticz.Device(Name="PCWU T2 (tank bottom)", Unit=2, TypeName='Temperature').Create()
+            Domoticz.Device(Name="T2 (tank bottom)", Unit=2, TypeName='Temperature').Create()
         if len(Devices) < 3:
-            Domoticz.Device(Name="PCWU T3 (tank top)", Unit=3, TypeName='Temperature').Create()
+            Domoticz.Device(Name="T3 (tank top)", Unit=3, TypeName='Temperature').Create()
+        if len(Devices) < 4:
+            Domoticz.Device(Name="Switch", Unit=4, TypeName='Switch', Image=9).Create()
 
         DumpConfigToLog()
 
         self.baseUrl = "socket://%s:%s" % (Parameters["Address"], Parameters["Port"])
         Domoticz.Debug("Base URL is set to %s" % self.baseUrl)
 
-        self.pcwuMode = int(Parameters["Mode2"])
-        Domoticz.Debug("PCWU mode is set to %d" % self.pcwuMode)
+        self.devMode = int(Parameters["Mode2"])
+        Domoticz.Debug("Device & Mode is set to %d" % self.devMode)
 
         Domoticz.Heartbeat(5)
 
@@ -101,11 +103,24 @@ class BasePlugin:
 
     def onMessagePCWU(self, obj, h, sh, m):
         Domoticz.Debug("onMessagePCWU called")
-        if (self.pcwuMode == 1 and sh["FNC"] == 0x60) or (self.pcwuMode == 2 and sh["FNC"] == 0x50):
-            mp = obj.parseRegisters(sh["RestMessage"])
-            Devices[1].Update(nValue=0, sValue=str(mp['T1']))
-            Devices[2].Update(nValue=0, sValue=str(mp['T2']))
-            Devices[3].Update(nValue=0, sValue=str(mp['T3']))
+        if (self.devMode == 1 and sh["FNC"] == 0x60) or (self.devMode == 2 and sh["FNC"] == 0x50):
+            mp = obj.parseStatusRegisters(sh["RestMessage"])
+            if 'T1' in mp:
+                Devices[1].Update(nValue=0, sValue=str(mp['T1']))
+            if 'T2' in mp:
+                Devices[2].Update(nValue=0, sValue=str(mp['T2']))
+            if 'T3' in mp:
+                Devices[3].Update(nValue=0, sValue=str(mp['T3']))
+
+    def onCommand(self, Unit, Command, Level, Hue):
+        Domoticz.Debug("onCommand called for unit %d with command %s, level %s." % (Unit, Command, Level))
+        if (Unit == 4) and (Command == "On"):
+            SendCommand(self, 'enable')
+            Devices[Unit].Update(nValue=1, sValue="")   # TODO - make sure that device is actually turned on
+        elif (Unit == 4) and (Command == "Off"):
+            SendCommand(self, 'disable')                # TODO - ...and off
+            Devices[Unit].Update(nValue=0, sValue="")
+        return True
 
     def onHeartbeat(self):
         Domoticz.Debug("onHeartbeat called %d" % self.lastPolled)
@@ -122,13 +137,12 @@ class BasePlugin:
                 attempt += 1
 
                 try:
-                    ser = serial.serial_for_url(self.baseUrl)
-                    pcwu = PCWU(self.conHardId, self.conSoftId, self.devHardId, self.devSoftId, self.onMessagePCWU)
-                    if (self.pcwuMode == 1):
-                        pcwu.eavesDrop(ser, 1)
-                    elif (self.pcwuMode == 2):
-                        pcwu.requestRegisters(ser, 92, 120)
-                    ser.close()
+                    # PCWU
+                    if (self.devMode == 1):
+                        SendCommand(self, 'eavesDrop')
+                    elif (self.devMode == 2):
+                        SendCommand(self, 'readStatusRegisters')
+                    # TODO - ZPS
                 except Exception as e:
                     Domoticz.Log("Exception from %s; %s" % (self.baseUrl, e))
                 else:
@@ -141,16 +155,17 @@ class BasePlugin:
 global _plugin
 _plugin = BasePlugin()
 
-
 def onStart():
     global _plugin
     _plugin.onStart()
-
 
 def onStop():
     global _plugin
     _plugin.onStop()
 
+def onCommand(Unit, Command, Level, Hue):
+    global _plugin
+    _plugin.onCommand(Unit, Command, Level, Hue)
 
 def onHeartbeat():
     global _plugin
@@ -158,6 +173,22 @@ def onHeartbeat():
 
 
 # Generic helper functions
+def SendCommand(plugin, command):
+    # PCWU
+    if (plugin.devMode == 1) or (plugin.devMode == 2):
+        ser = serial.serial_for_url(plugin.baseUrl)
+        dev = PCWU(plugin.conHardId, plugin.conSoftId, plugin.devHardId, plugin.devSoftId, plugin.onMessagePCWU)
+        if (command == 'eavesDrop'):
+            dev.eavesDrop(ser, 1)
+        elif (command == 'readStatusRegisters'):
+            dev.readStatusRegisters(ser)
+        elif (command == 'disable'):
+            dev.disable(ser)
+        elif (command == 'enable'):
+            dev.enable(ser)
+        ser.close()
+    # TODO - ZPS
+
 def DumpConfigToLog():
     for x in Parameters:
         if Parameters[x] != "":

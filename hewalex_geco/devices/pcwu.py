@@ -82,7 +82,7 @@ class PCWU:
             w = w - 0x10000
         return w / 10.0
 
-    def parseRegisters(self, m):
+    def parseStatusRegisters(self, m):
         temp = {
             'T1': 8,
             'T2': 10,
@@ -97,22 +97,26 @@ class PCWU:
         }
         ret = {}
 
-        ret["date"] = "20{:02d}-{:02d}-{:02d}".format(m[0], m[1], m[2]) #m[3] Day Of Week 0 = Monday
-        ret["time"] = "{:02d}:{:02d}:{:02d}".format(m[4], m[5], m[6]) #m[7] always 0, probably for proper aligment
+        if len(m) >= 92:
+            ret["date"] = "20{:02d}-{:02d}-{:02d}".format(m[0], m[1], m[2]) #m[3] Day Of Week 0 = Monday
+            ret["time"] = "{:02d}:{:02d}:{:02d}".format(m[4], m[5], m[6]) #m[7] always 0, probably for proper aligment
 
-        ret["unknown5"] = hex(self.getWord(m[46:]))
-        ret["unknown3"] = hex(self.getWord(m[72:])) #org 73
-        ret["IsManual"] = self.getWord(m[74:])
-        ret["unknown1"] = hex(self.getWord(m[76:]))
-        ret["EV1"] = self.getWord(m[78:]) #unknown4
-        ret["unknown2"] = hex(m[82])
-        ret["unknown6"] = hex(self.getWord(m[86:]))
-        ret["unknown7"] = hex(self.getWord(m[90:]))
-        if len(m) == 104:
-            ret["unknown8"] = hex(self.getWord(m[98:]))
-            ret["unknown9"] = hex(self.getWord(m[100:]))
-        for name in temp:
-            ret[name] = self.getTemp(m[temp[name]:])
+            for name in temp:
+                ret[name] = self.getTemp(m[temp[name]:])
+
+            ret["unknown5"] = hex(self.getWord(m[46:]))
+            ret["unknown3"] = hex(self.getWord(m[72:])) #org 73
+            ret["IsManual"] = self.getWord(m[74:])
+            ret["unknown1"] = hex(self.getWord(m[76:]))
+            ret["EV1"] = self.getWord(m[78:]) #unknown4
+            ret["unknown2"] = hex(m[82])
+            ret["unknown6"] = hex(self.getWord(m[86:]))
+            ret["unknown7"] = hex(self.getWord(m[90:]))
+
+            if len(m) >= 104:
+                ret["unknown8"] = hex(self.getWord(m[98:]))
+                ret["unknown9"] = hex(self.getWord(m[100:]))
+
         return ret
 
     def printMessage(self, h, sh):
@@ -205,9 +209,9 @@ class PCWU:
             # process
             self.processAllMessages(s + m)
 
-    def createRegistersRequest(self, SlaveHardId, MasterHardId, SlaveSoftId, MasterSoftId, num, start):
-        header = [0x69, SlaveHardId, MasterHardId, 0x84, 0, 0]
-        payload = [(SlaveSoftId & 0xff), ((SlaveSoftId >> 8) & 0xff), (MasterSoftId & 0xff), ((MasterSoftId >> 8) & 0xff), 0x40, 0x80, 0, num, start, 0]
+    def createReadRegistersMessage(self, start, num):
+        header = [0x69, self.devHardId, self.conHardId, 0x84, 0, 0]
+        payload = [(self.devSoftId & 0xff), ((self.devSoftId >> 8) & 0xff), (self.conSoftId & 0xff), ((self.conSoftId >> 8) & 0xff), 0x40, 0x80, 0, num, start & 0xff, (start >> 8) & 0xff]
         calcCrc16 = crc16(payload)
         payload.append((calcCrc16 >> 8) & 0xff)
         payload.append(calcCrc16 & 0xff)
@@ -216,10 +220,38 @@ class PCWU:
         header.append(calcCrc8)
         return bytearray(header + payload)
 
-    def requestRegisters(self, ser, num, start):
-        m = self.createRegistersRequest(self.devHardId, self.conHardId, self.devSoftId, self.conSoftId, num, start)
+    def createWriteRegisterMessage(self, reg, val):
+        header = [0x69, self.devHardId, self.conHardId, 0x84, 0, 0]
+        payload = [(self.devSoftId & 0xff), ((self.devSoftId >> 8) & 0xff), (self.conSoftId & 0xff), ((self.conSoftId >> 8) & 0xff), 0x60, 0x80, 0, 2, reg & 0xff, (reg >> 8) & 0xff, val & 0xff, (val >> 8) & 0xff]
+        calcCrc16 = crc16(payload)
+        payload.append((calcCrc16 >> 8) & 0xff)
+        payload.append(calcCrc16 & 0xff)
+        header.append(len(payload))
+        calcCrc8 = crc8(header)
+        header.append(calcCrc8)
+        return bytearray(header + payload)
+
+    def readRegisters(self, ser, start, num):
+        m = self.createReadRegistersMessage(start, num)
         ser.flushInput()
         ser.timeout = 0.4
         ser.write(m)
         r = ser.read(1000)
-        self.processAllMessages(r)
+        return self.processAllMessages(r)
+
+    def writeRegister(self, ser, reg, val):
+        m = self.createWriteRegisterMessage(reg, val)
+        ser.flushInput()
+        ser.timeout = 0.4
+        ser.write(m)
+        r = ser.read(1000)
+        return self.processAllMessages(r)
+
+    def readStatusRegisters(self, ser):
+        return self.readRegisters(ser, 120, 92)     # TODO - find out why some heat pumps do 92 and others do 104 registers
+
+    def disable(self, ser):
+        return self.writeRegister(ser, 304, 0)
+
+    def enable(self, ser):
+        return self.writeRegister(ser, 304, 1)

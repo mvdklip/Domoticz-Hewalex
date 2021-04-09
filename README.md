@@ -47,7 +47,7 @@ sudo /etc/init.d/domoticz.sh restart
 | :--- | :--- |
 | **IP address** | IP of the RS485 to Wi-Fi device eg. 192.168.1.231 |
 | **Port** | Port of the RS485 to Wi-Fi device eg. 8899 |
-| **PCWU Mode** | Eavesdropping or Direct comms |
+| **Device & Mode** | Device type and mode of communication |
 | **Query interval** | how often is data retrieved |
 | **Debug** | show debug logging |
 

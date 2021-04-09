@@ -18,11 +18,11 @@ devSoftId = 2
 def onMessage(obj, h, sh, m):
     if sh["FNC"] == 0x50:
         #obj.printMessage(h, sh)
-        mp = obj.parseRegisters(sh["RestMessage"])
+        mp = obj.parseStatusRegisters(sh["RestMessage"])
         print(mp)
 
 #ser = serial.Serial('/dev/ttySC1', 38400, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE)
 ser = serial.serial_for_url('socket://192.168.12.34:8899')
 pcwu = PCWU(conHardId, conSoftId, devHardId, devSoftId, onMessage)
-pcwu.requestRegisters(ser, 92, 120)
+pcwu.readStatusRegisters(ser)
 ser.close()
