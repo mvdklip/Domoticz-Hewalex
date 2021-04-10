@@ -8,7 +8,7 @@
 # https://github.com/mvdklip/hewalex-geco-protocol
 
 """
-<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.3.1">
+<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.3.2">
     <description>
         <h2>Hewalex Plugin</h2><br/>
         <h3>Features</h3>
@@ -118,10 +118,10 @@ class BasePlugin:
 
     def onCommand(self, Unit, Command, Level, Hue):
         Domoticz.Debug("onCommand called for unit %d with command %s, level %s." % (Unit, Command, Level))
-        if (Unit == 4) and (Command == "On"):
+        if (Unit == 4) and (Command == "On") and (self.devMode == 2):
             SendCommand(self, 'enable')
             Devices[Unit].Update(nValue=1, sValue="")   # TODO - check if device is actually switched on
-        elif (Unit == 4) and (Command == "Off"):
+        elif (Unit == 4) and (Command == "Off") and (self.devMode == 2):
             SendCommand(self, 'disable')                # TODO - ... or off
             Devices[Unit].Update(nValue=0, sValue="")
         return True

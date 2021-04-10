@@ -11,7 +11,7 @@ Not implemented yet.
 
 ### Heat pumps (PCWU)
 
-RS485 to Wi-Fi device setup and either eavesdropping on the communication between the G-426 controller and the PCWU or communicating directly to the PCWU over a dedicated RS485 port. See https://github.com/mvdklip/hewalex-geco-protocol/tree/main/docs/PCWU for more information.
+RS485 to Wi-Fi device setup and either eavesdropping on the communication between the G-426 controller and the PCWU or communicating directly to the PCWU over a dedicated RS485 port. Eavesdropping is easier to setup and allows reading temperatures but does not allow control over the pump. See https://github.com/mvdklip/hewalex-geco-protocol/tree/main/docs/PCWU for more information.
 
 ## Installation
 
@@ -31,7 +31,7 @@ Afterwards navigate to the Devices page and enable the newly created devices.
 
 ## Known issues
 
-This plugin is work in progress. Currently it only reads temperature registers for heat pumps. In the future it will also support solar pumps and allow control over the connected pump.
+This plugin is work in progress. Solar pump (ZPS) support is planned but not implemented yet.
 
 ## Updating
 
