@@ -5,10 +5,10 @@
 # Based on
 #
 # https://www.elektroda.pl/rtvforum/topic3499254.html
-# https://github.com/mvdklip/hewalex-geco-protocol
+# https://github.com/aelias-eu/hewalex-geco-protocol
 
 """
-<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.3.2">
+<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.4.0">
     <description>
         <h2>Hewalex Plugin</h2><br/>
         <h3>Features</h3>
@@ -23,6 +23,7 @@
             <options>
                 <option label="PCWU - Eavesdropping" value="1" default="true"/>
                 <option label="PCWU - Direct comms" value="2"/>
+                <option label="ZPS - Direct comms" value="3"/>
             </options>
         </param>
         <param field="Mode3" label="Query interval" width="75px" required="true">
@@ -51,7 +52,7 @@
 import serial
 import Domoticz
 
-from hewalex_geco.devices import PCWU
+from hewalex_geco.devices import PCWU, ZPS
 
 
 class BasePlugin:
@@ -65,7 +66,7 @@ class BasePlugin:
     conHardId = 1
     conSoftId = 1
 
-    # PCWU (Slave)
+    # Device (Slave)
     devHardId = 2
     devSoftId = 2
 
@@ -79,32 +80,42 @@ class BasePlugin:
         else:
             Domoticz.Debugging(0)
 
-        if len(Devices) < 1:
-            Domoticz.Device(Name="T1 (ambient)", Unit=1, TypeName='Temperature').Create()
-        if len(Devices) < 2:
-            Domoticz.Device(Name="T2 (tank bottom)", Unit=2, TypeName='Temperature').Create()
-        if len(Devices) < 3:
-            Domoticz.Device(Name="T3 (tank top)", Unit=3, TypeName='Temperature').Create()
-        if len(Devices) < 4:
-            Domoticz.Device(Name="Switch", Unit=4, TypeName='Switch', Image=9).Create()
-
-        DumpConfigToLog()
-
         self.baseUrl = "socket://%s:%s" % (Parameters["Address"], Parameters["Port"])
         Domoticz.Debug("Base URL is set to %s" % self.baseUrl)
 
         self.devMode = int(Parameters["Mode2"])
         Domoticz.Debug("Device & Mode is set to %d" % self.devMode)
 
+        if (self.devMode == 1) or (self.devMode == 2):
+            if len(Devices) < 1:
+                Domoticz.Device(Name="T1 (ambient)", Unit=1, TypeName='Temperature').Create()
+            if len(Devices) < 2:
+                Domoticz.Device(Name="T2 (tank bottom)", Unit=2, TypeName='Temperature').Create()
+            if len(Devices) < 3:
+                Domoticz.Device(Name="T3 (tank top)", Unit=3, TypeName='Temperature').Create()
+            if len(Devices) < 4:
+                Domoticz.Device(Name="Switch", Unit=4, TypeName='Switch', Image=9).Create()
+        elif (self.devMode == 3):
+            if len(Devices) < 1:
+                Domoticz.Device(Name="T1 (collectors)", Unit=1, TypeName='Temperature').Create()
+            if len(Devices) < 2:
+                Domoticz.Device(Name="T2 (tank bottom)", Unit=2, TypeName='Temperature').Create()
+            if len(Devices) < 3:
+                Domoticz.Device(Name="T3 (air separator)", Unit=3, TypeName='Temperature').Create()
+            if len(Devices) < 4:
+                Domoticz.Device(Name="T4 (tank top)", Unit=4, TypeName='Temperature').Create()
+
+        DumpConfigToLog()
+
         Domoticz.Heartbeat(5)
 
     def onStop(self):
         Domoticz.Debug("onStop called")
 
-    def onMessagePCWU(self, obj, h, sh, m):
+    def onMessagePCWU(self, dev, h, sh, m):
         Domoticz.Debug("onMessagePCWU called")
         if (self.devMode == 1 and sh["FNC"] == 0x60) or (self.devMode == 2 and sh["FNC"] == 0x50):
-            mp = obj.parseStatusRegisters(sh["RestMessage"])
+            mp = dev.parseStatusRegisters(sh["RestMessage"])
             if 'T1' in mp:
                 Devices[1].Update(nValue=0, sValue=str(mp['T1']))
             if 'T2' in mp:
@@ -115,6 +126,19 @@ class BasePlugin:
                 newValue = int(mp['WaitingStatus'] != 2)
                 if newValue != Devices[4].nValue:
                     Devices[4].Update(nValue=newValue, sValue="")
+
+    def onMessageZPS(self, dev, h, sh, m):
+        Domoticz.Debug("onMessageZPS called")
+        if (sh["FNC"] == 0x50):
+            mp = dev.parseStatusRegisters(sh["RestMessage"])
+            if 'T1' in mp:
+                Devices[1].Update(nValue=0, sValue=str(mp['T1']))
+            if 'T2' in mp:
+                Devices[2].Update(nValue=0, sValue=str(mp['T2']))
+            if 'T3' in mp:
+                Devices[3].Update(nValue=0, sValue=str(mp['T3']))
+            if 'T4' in mp:
+                Devices[4].Update(nValue=0, sValue=str(mp['T4']))
 
     def onCommand(self, Unit, Command, Level, Hue):
         Domoticz.Debug("onCommand called for unit %d with command %s, level %s." % (Unit, Command, Level))
@@ -141,12 +165,10 @@ class BasePlugin:
                 attempt += 1
 
                 try:
-                    # PCWU
                     if (self.devMode == 1):
                         SendCommand(self, 'eavesDrop')
-                    elif (self.devMode == 2):
+                    elif (self.devMode == 2) or (self.devMode == 3):
                         SendCommand(self, 'readStatusRegisters')
-                    # TODO - ZPS
                 except Exception as e:
                     Domoticz.Log("Exception from %s; %s" % (self.baseUrl, e))
                 else:
@@ -178,10 +200,15 @@ def onHeartbeat():
 
 # Generic helper functions
 def SendCommand(plugin, command):
-    # PCWU
+    ser = serial.serial_for_url(plugin.baseUrl)
+    dev = None
+
     if (plugin.devMode == 1) or (plugin.devMode == 2):
-        ser = serial.serial_for_url(plugin.baseUrl)
         dev = PCWU(plugin.conHardId, plugin.conSoftId, plugin.devHardId, plugin.devSoftId, plugin.onMessagePCWU)
+    elif (plugin.devMode == 3):
+        dev = ZPS(plugin.conHardId, plugin.conSoftId, plugin.devHardId, plugin.devSoftId, plugin.onMessageZPS)
+
+    if dev:
         if (command == 'eavesDrop'):
             dev.eavesDrop(ser, 1)
         elif (command == 'readStatusRegisters'):
@@ -190,8 +217,8 @@ def SendCommand(plugin, command):
             dev.disable(ser)
         elif (command == 'enable'):
             dev.enable(ser)
-        ser.close()
-    # TODO - ZPS
+
+    ser.close()
 
 def DumpConfigToLog():
     for x in Parameters:

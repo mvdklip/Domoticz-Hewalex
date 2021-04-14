@@ -1,17 +1,18 @@
 # Domoticz-Hewalex
-Domoticz plugin to integrate Hewalex solar and heat pumps
+Domoticz plugin to integrate Hewalex heat and solar pumps
 
 Tested with Python version 3.8, Domoticz version 2020.2 stable
 
 ## Prerequisites
 
-### Solar pumps (ZPS)
-
-Not implemented yet.
-
 ### Heat pumps (PCWU)
 
 RS485 to Wi-Fi device setup and either eavesdropping on the communication between the G-426 controller and the PCWU or communicating directly to the PCWU over a dedicated RS485 port. Eavesdropping is easier to setup and allows reading temperatures but does not allow control over the pump. See https://github.com/mvdklip/hewalex-geco-protocol/tree/main/docs/PCWU for more information.
+
+### Solar pumps (ZPS)
+
+RS485 to Wi-Fi device setup and connected to the RS485 port on the backside of the G-422 controller. https://github.com/mvdklip/hewalex-geco-protocol/tree/main/docs/ZPS for more information.
+Not implemented yet.
 
 ## Installation
 
@@ -30,8 +31,6 @@ Make sure to (temporarily) enable 'Accept new Hardware Devices' in System Settin
 Afterwards navigate to the Devices page and enable the newly created devices.
 
 ## Known issues
-
-This plugin is work in progress. Solar pump (ZPS) support is planned but not implemented yet.
 
 ## Updating
 
@@ -56,4 +55,4 @@ sudo /etc/init.d/domoticz.sh restart
 Based on
 
 https://www.elektroda.pl/rtvforum/topic3499254.html \
-https://github.com/mvdklip/hewalex-geco-protocol
+https://github.com/aelias-eu/hewalex-geco-protocol

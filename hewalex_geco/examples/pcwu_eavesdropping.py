@@ -1,10 +1,8 @@
 import serial
 
+
+# Eavesdropping on G-426 to PCWU comms example
 from hewalex_geco.devices import PCWU
-
-
-# Eavesdropping on P-426 to PCWU comms example
-#
 
 # Controller (Master)
 conHardId = 1
