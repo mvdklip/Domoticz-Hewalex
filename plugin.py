@@ -8,7 +8,7 @@
 # https://github.com/aelias-eu/hewalex-geco-protocol
 
 """
-<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.4.0">
+<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.4.1">
     <description>
         <h2>Hewalex Plugin</h2><br/>
         <h3>Features</h3>
@@ -104,6 +104,8 @@ class BasePlugin:
                 Domoticz.Device(Name="T3 (air separator)", Unit=3, TypeName='Temperature').Create()
             if len(Devices) < 4:
                 Domoticz.Device(Name="T4 (tank top)", Unit=4, TypeName='Temperature').Create()
+            if len(Devices) < 5:
+                Domoticz.Device(Name="kWh total", Unit=5, TypeName='Custom', Options={'Custom': '1;kWh'}).Create()
 
         DumpConfigToLog()
 
@@ -139,6 +141,8 @@ class BasePlugin:
                 Devices[3].Update(nValue=0, sValue=str(mp['T3']))
             if 'T4' in mp:
                 Devices[4].Update(nValue=0, sValue=str(mp['T4']))
+            if 'TotalEnergy' in mp:
+                Devices[5].Update(nValue=0, sValue=str(mp['TotalEnergy']))
 
     def onCommand(self, Unit, Command, Level, Hue):
         Domoticz.Debug("onCommand called for unit %d with command %s, level %s." % (Unit, Command, Level))

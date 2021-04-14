@@ -25,13 +25,13 @@ class ZPS(BaseDevice):
         for name in temp:
             ret[name] = self.getTemp(m[temp[name]:], 1)
 
-        ret["SolarPower"] = self.getWord(m[24:])
+        ret["SolarPower"] = self.getWord(m[24:])                # Watt
         ret["Reg148"] = self.getWord(m[28:])
         ret["CollectorPumpON"] = self.getWord(m[30:])
-        ret["Flow"] = self.getWord(m[32:]) / 10.0
+        ret["Flow"] = self.getWord(m[32:]) / 10.0               # l/min
         ret["Reg154"] = self.getWord(m[34:])
         ret["Reg156"] = self.getWord(m[36:])
-        ret["TotalEnergy"] = self.getWord(m[46:]) / 10.0
+        ret["TotalEnergy"] = self.getWord(m[46:]) / 10.0        # kWh
 
         return ret
 
@@ -39,7 +39,7 @@ class ZPS(BaseDevice):
         return self.readRegisters(ser, 120, 50)
 
 #    def disable(self, ser):
-#        return self.writeRegister(ser, 304, 0)
+#        return self.writeRegister(ser, X, 0)
 
 #    def enable(self, ser):
-#        return self.writeRegister(ser, 304, 1)
+#        return self.writeRegister(ser, X, 1)
