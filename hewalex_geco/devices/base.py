@@ -48,6 +48,9 @@ class BaseDevice:
     def getWordReverse(self, w):
         return (w[0] << 8) | w[1]
 
+    def getDWord(self, w):
+        return (w[3] << 24) | (w[2] << 16) | (w[1] << 8) | w[0]
+
     def parseSoftHeader(self, h, m):
         if len(m) != h["Payload"]:
             raise Exception("Invalid soft message len")
@@ -104,6 +107,9 @@ class BaseDevice:
                     val = self.getWord(m[adr:])
                 elif reg['type'] == 'rwrd':
                     val = self.getWordReverse(m[adr:])
+                elif reg['type'] == 'dwrd':
+                    val = self.getDWord(m[adr:])
+                    skip = 1
                 elif reg['type'] == 'temp':
                     val = self.getTemp(m[adr:], 1.0)
                 elif reg['type'] == 'te10':
