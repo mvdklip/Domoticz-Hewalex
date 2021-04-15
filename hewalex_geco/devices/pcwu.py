@@ -1,7 +1,4 @@
-from binascii import hexlify, unhexlify
-
 from .base import BaseDevice
-from ..crc import *
 
 # Based on work by krzysztof1111111111
 # https://www.elektroda.pl/rtvforum/topic3499254.html

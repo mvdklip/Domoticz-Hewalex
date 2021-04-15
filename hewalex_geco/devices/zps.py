@@ -1,7 +1,4 @@
-from binascii import hexlify, unhexlify
-
 from .base import BaseDevice
-from ..crc import *
 
 # Based on work by aelias-eu
 # https://github.com/aelias-eu/hewalex-geco-protocol
