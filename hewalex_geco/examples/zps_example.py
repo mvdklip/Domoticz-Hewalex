@@ -16,7 +16,7 @@ devSoftId = 2
 def onMessage(obj, h, sh, m):
     if sh["FNC"] == 0x50:
         #obj.printMessage(h, sh)
-        mp = obj.parseStatusRegisters(sh["RestMessage"])
+        mp = obj.parseStatusRegisters(sh["RestMessage"], sh["RegStart"], sh["RegLen"])
         print(mp)
 
 #ser = serial.Serial('/dev/ttySC1', 38400, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE)

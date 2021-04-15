@@ -82,6 +82,44 @@ class BaseDevice:
             w = w - 0x10000
         return w / divisor
 
+    def parseStatusRegisters(self, m, regstart, reglen, unknown=False):
+        ret = {}
+
+        skip = 0
+        for regnum in range(regstart, regstart + reglen, 2):
+            if skip > 0:
+                skip = skip - 1
+                continue
+            reg = self.registers.get(regnum, None)
+            adr = regnum - regstart
+            if reg:
+                val = None
+                if reg['type'] == 'date':
+                    val = "20{:02d}-{:02d}-{:02d}".format(m[adr], m[adr+1], m[adr+2])
+                    skip = 1
+                elif reg['type'] == 'time':
+                    val = "{:02d}:{:02d}:{:02d}".format(m[adr], m[adr+1], m[adr+2])
+                    skip = 1
+                elif reg['type'] == 'word':
+                    val = self.getWord(m[adr:])
+                elif reg['type'] == 'rwrd':
+                    val = self.getWordReverse(m[adr:])
+                elif reg['type'] == 'temp':
+                    val = self.getTemp(m[adr:], 1.0)
+                elif reg['type'] == 'te10':
+                    val = self.getTemp(m[adr:], 10.0)
+                elif reg['type'] == 'fl10':
+                    val = self.getWord(m[adr:]) / 10.0
+                elif reg['type'] == 'f100':
+                    val = self.getWord(m[adr:]) / 100.0
+                elif reg['type'] == 'bool':
+                    val = bool(self.getWord(m[adr:]))
+                ret[reg['name']] = val
+            elif unknown:
+                ret["Reg%d" % regnum] = self.getWord(m[adr:])
+
+        return ret
+
     def printMessage(self, h, sh):
         print ({
             'hard': {
@@ -214,8 +252,7 @@ class BaseDevice:
 # Interface to implement in child classes
 #########################################
 
-    def parseStatusRegisters(self, m):
-        raise NotImplementedError
+    registers = {}
 
     def readStatusRegisters(self, ser):
         raise NotImplementedError

@@ -8,7 +8,7 @@
 # https://github.com/aelias-eu/hewalex-geco-protocol
 
 """
-<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.4.1">
+<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.4.2">
     <description>
         <h2>Hewalex Plugin</h2><br/>
         <h3>Features</h3>
@@ -117,7 +117,7 @@ class BasePlugin:
     def onMessagePCWU(self, dev, h, sh, m):
         Domoticz.Debug("onMessagePCWU called")
         if (self.devMode == 1 and sh["FNC"] == 0x60) or (self.devMode == 2 and sh["FNC"] == 0x50):
-            mp = dev.parseStatusRegisters(sh["RestMessage"])
+            mp = dev.parseStatusRegisters(sh["RestMessage"], sh["RegStart"], sh["RegLen"])
             if 'T1' in mp:
                 Devices[1].Update(nValue=0, sValue=str(mp['T1']))
             if 'T2' in mp:
@@ -132,7 +132,7 @@ class BasePlugin:
     def onMessageZPS(self, dev, h, sh, m):
         Domoticz.Debug("onMessageZPS called")
         if (sh["FNC"] == 0x50):
-            mp = dev.parseStatusRegisters(sh["RestMessage"])
+            mp = dev.parseStatusRegisters(sh["RestMessage"], sh["RegStart"], sh["RegLen"])
             if 'T1' in mp:
                 Devices[1].Update(nValue=0, sValue=str(mp['T1']))
             if 'T2' in mp:

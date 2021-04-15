@@ -8,45 +8,27 @@ from ..crc import *
 
 
 class PCWU(BaseDevice):
-    def parseStatusRegisters(self, m):
-        temp = {
-            'T1': 8,
-            'T2': 10,
-            'T3': 12,
-            'T4': 14,#
-            'T5': 16,#
-            'T6': 18,
-            'T7': 20,
-            'T8': 22,
-            'T9': 24,
-            'T10': 26
-        }
-        ret = {}
-
-        if len(m) >= 92:
-            ret["date"] = "20{:02d}-{:02d}-{:02d}".format(m[0], m[1], m[2]) #m[3] Day Of Week 0 = Monday
-            ret["time"] = "{:02d}:{:02d}:{:02d}".format(m[4], m[5], m[6]) #m[7] always 0, probably for proper aligment
-
-            for name in temp:
-                ret[name] = self.getTemp(m[temp[name]:], 10.0)
-
-            ret["unknown5"] = hex(self.getWord(m[46:]))
-            ret["unknown3"] = hex(self.getWord(m[72:])) #org 73
-            ret["IsManual"] = self.getWord(m[74:])
-            ret["unknown1"] = hex(self.getWord(m[76:]))
-            ret["EV1"] = self.getWord(m[78:]) #unknown4
-            ret["WaitingStatus"] = self.getWord(m[82:])
-            ret["unknown6"] = hex(self.getWord(m[86:]))
-            ret["unknown7"] = hex(self.getWord(m[90:]))
-
-            if len(m) >= 104:
-                ret["unknown8"] = hex(self.getWord(m[98:]))
-                ret["unknown9"] = hex(self.getWord(m[100:]))
-
-        return ret
+    registers = {
+        120: { 'type': 'date', 'name': 'date' },                        # Date
+        124: { 'type': 'time', 'name': 'time' },                        # Time
+        128: { 'type': 'te10', 'name': 'T1' },                          # T1 (Ambient temp)
+        130: { 'type': 'te10', 'name': 'T2' },                          # T2 (Tank bottom temp)
+        132: { 'type': 'te10', 'name': 'T3' },                          # T3 (Tank top temp)
+        138: { 'type': 'te10', 'name': 'T6' },
+        140: { 'type': 'te10', 'name': 'T7' },
+        142: { 'type': 'te10', 'name': 'T8' },
+        144: { 'type': 'te10', 'name': 'T9' },
+        146: { 'type': 'te10', 'name': 'T10' },
+        194: { 'type': 'bool', 'name': 'IsManual' },
+        198: { 'type': 'word', 'name': 'EV1' },
+        202: { 'type': 'word', 'name': 'WaitingStatus' },
+    }
 
     def readStatusRegisters(self, ser):
-        return self.readRegisters(ser, 120, 92)     # TODO - find out why some heat pumps do 92 and others do 104 registers
+        # registers below 256 (dubbed 'status registers') are read-only
+        # the most interesting registers start at 120
+        # in eavesdropping mode some pumps send 92 registers, others send 104; why is unknown
+        return self.readRegisters(ser, 120, 92)
 
     def disable(self, ser):
         return self.writeRegister(ser, 304, 0)
