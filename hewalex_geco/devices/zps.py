@@ -28,7 +28,7 @@ class ZPS(BaseDevice):
         178: { 'type': 'bool', 'name': 'KeySoundEnabled' },             # Key Sound Enabled (True/False)
         180: { 'type': 'word', 'name': 'DisplayLanguage' },             # Display Language (0=PL, 1=EN, 2=DE, 3=FR, 4=PT, 5=ES, 6=NL, 7=IT, 8=CZ, 9=SL, ...)
         182: { 'type': 'temp', 'name': 'FluidFreezingTemp' },           # Fluid Freezing Temp
-        186: { 'type': 'fl10', 'name': 'FlowRateNominal' },             # Flow Rate Nominal (l/min) (45)
+        186: { 'type': 'fl10', 'name': 'FlowRateNominal' },             # Flow Rate Nominal (l/min)
         188: { 'type': 'word', 'name': 'FlowRateMeasurement' },         # Flow Rate Measurement (0=Rotameter, 1=Electronic G916, 2=Electronic)
         190: { 'type': 'f100', 'name': 'FlowRateWeight' },              # Flow Rate Weight (imp/l)
         192: { 'type': 'bool', 'name': 'HolidayEnabled' },              # Holiday Enabled (True/False)
@@ -74,8 +74,8 @@ class ZPS(BaseDevice):
         322: { 'type': 'bool', 'name': 'CirculationPumpEnabled' },      # Circulation Pump Enabled (True/False)
         324: { 'type': 'word', 'name': 'CirculationPumpMode' },         # Circulation Pump Mode (0=Discontinuous, 1=Continuous)
         326: { 'type': 'temp', 'name': 'CirculationPumpMinTemp' },      # Circulation Pump Min Temp (Minimum T4 temp to turn on circulation pump)
-        328: { 'type': 'word', 'name': 'CirculationPumpONTime' },       # Circulation Pump ON Time (1-59min)
-        330: { 'type': 'word', 'name': 'CirculationPumpOFFTime' },      # Circulation Pump OFF Time (1-59min)
+        328: { 'type': 'word', 'name': 'CirculationPumpONTime' },       # Circulation Pump ON Time (1-59 min)
+        330: { 'type': 'word', 'name': 'CirculationPumpOFFTime' },      # Circulation Pump OFF Time (1-59 min)
     }
 
     def readStatusRegisters(self, ser):
