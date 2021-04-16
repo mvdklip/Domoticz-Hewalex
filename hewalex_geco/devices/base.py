@@ -85,6 +85,12 @@ class BaseDevice:
             w = w - 0x10000
         return w / divisor
 
+    def parseBitMask(self, val, names, ret):
+        for name in names:
+            if name is not None:
+                ret[name] = bool(val & 1)
+            val = val >> 1
+
     def parseStatusRegisters(self, m, regstart, reglen, unknown=False):
         ret = {}
 
@@ -120,6 +126,13 @@ class BaseDevice:
                     val = self.getWord(m[adr:]) / 100.0
                 elif reg['type'] == 'bool':
                     val = bool(self.getWord(m[adr:]))
+                elif reg['type'] == 'mask':
+                    self.parseBitMask(self.getWord(m[adr:]), reg['name'], ret)
+                    continue
+                elif reg['type'] == 'tprg':
+                    val = {}
+                    self.parseBitMask(self.getDWord(m[adr:]), range(0, 24), val)
+                    skip = 1
                 ret[reg['name']] = val
             elif unknown:
                 ret["Reg%d" % regnum] = self.getWord(m[adr:])

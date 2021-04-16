@@ -18,7 +18,11 @@ class ZPS(BaseDevice):
         148: { 'type': 'fl10', 'name': 'Consumption' },                 # Consumption (W)
         150: { 'type': 'bool', 'name': 'CollectorActive' },             # Collector Active (True/False)
         152: { 'type': 'fl10', 'name': 'FlowRate' },                    # Flow Rate (l/min)
-        154: { 'type': 'bool', 'name': 'CollectorPumpON' },             # Collector Pump ON (True/False)
+        154: { 'type': 'mask', 'name': [
+            'CollectorPumpON',                                          # Collector Pump (P) ON (True/False)
+            None,                                                       # Boiler Pump (K) ON?
+            'CirculationPumpON',                                        # Circulation Pump (C) ON (True/False)
+        ]},
         156: { 'type': 'word', 'name': 'CollectorPumpSpeed' },          # Collector Pump Speed (0-15)
         166: { 'type': 'fl10', 'name': 'TotalEnergy' },                 # Total Energy (kWh)
         170: { 'type': 'word', 'name': 'InstallationScheme' },          # Installation Scheme (1-19)
@@ -57,12 +61,12 @@ class ZPS(BaseDevice):
         242: { 'type': 'temp', 'name': 'NightCoolingStartTemp' },       # Night Cooling Start Temp
         244: { 'type': 'temp', 'name': 'NightCoolingStopTemp' },        # Night Cooling Stop Temp
         246: { 'type': 'word', 'name': 'NightCoolingStopTime' },        # Night Cooling Stop Time (hr)
-        248: { 'type': 'dwrd', 'name': 'TimeProgramCM-F' },             # Time Program C M-F (0x3FFFC0)
-        252: { 'type': 'dwrd', 'name': 'TimeProgramCSat' },             # Time Program C Sat (0x3FFF80)
-        256: { 'type': 'dwrd', 'name': 'TimeProgramCSun' },             # Time Program C Sun (0x3FFF80)
-        260: { 'type': 'dwrd', 'name': 'TimeProgramKM-F' },             # Time Program K M-F (0x3FFFC0)
-        264: { 'type': 'dwrd', 'name': 'TimeProgramKSat' },             # Time Program K Sat (0x3FFF80)
-        268: { 'type': 'dwrd', 'name': 'TimeProgramKSun' },             # Time Program K Sun (0x3FFF80)
+        248: { 'type': 'tprg', 'name': 'TimeProgramCM-F' },             # Time Program C M-F (True/False per hour of the day)
+        252: { 'type': 'tprg', 'name': 'TimeProgramCSat' },             # Time Program C Sat (True/False per hour of the day)
+        256: { 'type': 'tprg', 'name': 'TimeProgramCSun' },             # Time Program C Sun (True/False per hour of the day)
+        260: { 'type': 'tprg', 'name': 'TimeProgramKM-F' },             # Time Program K M-F (True/False per hour of the day)
+        264: { 'type': 'tprg', 'name': 'TimeProgramKSat' },             # Time Program K Sat (True/False per hour of the day)
+        268: { 'type': 'tprg', 'name': 'TimeProgramKSun' },             # Time Program K Sun (True/False per hour of the day)
         278: { 'type': 'word', 'name': 'CollectorPumpMinRev' },         # Collector Pump Min Rev (rev/min)
         280: { 'type': 'word', 'name': 'CollectorPumpMaxRev' },         # Collector Pump Max Rev (rev/min)
         282: { 'type': 'word', 'name': 'CollectorPumpMinIncTime' },     # Collector Pump Min Increase Time (s)
