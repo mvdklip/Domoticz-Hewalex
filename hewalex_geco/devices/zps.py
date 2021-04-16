@@ -74,6 +74,7 @@ class ZPS(BaseDevice):
         286: { 'type': 'word', 'name': 'CollectorPumpStartupSpeed' },   # Collector Pump Startup Speed (1-15)
         288: { 'type': 'bool', 'name': 'PressureSwitchEnabled' },       # Pressure Switch Enabled (True/False)
         290: { 'type': 'bool', 'name': 'TankOverheatProtEnabled' },     # Tank Overheat Protection Enabled (True/False)
+        312: { 'type': 'dwrd', 'name': 'TotalOperationTime' },          # Total Operation Time (min)
         320: { 'type': 'word', 'name': 'Reg320' },                      # This one is interesting; it changes constantly
         322: { 'type': 'bool', 'name': 'CirculationPumpEnabled' },      # Circulation Pump Enabled (True/False)
         324: { 'type': 'word', 'name': 'CirculationPumpMode' },         # Circulation Pump Mode (0=Discontinuous, 1=Continuous)
