@@ -21,6 +21,6 @@ def onMessage(obj, h, sh, m):
 
 #ser = serial.Serial('/dev/ttySC1', 38400, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE)
 ser = serial.serial_for_url('socket://192.168.12.34:8899')
-pcwu = ZPS(conHardId, conSoftId, devHardId, devSoftId, onMessage)
-pcwu.readStatusRegisters(ser)
+dev = ZPS(conHardId, conSoftId, devHardId, devSoftId, onMessage)
+dev.readStatusRegisters(ser)
 ser.close()
