@@ -231,7 +231,7 @@ class BaseDevice:
 
     def createReadRegistersMessage(self, start, num):
         header = [0x69, self.devHardId, self.conHardId, 0x84, 0, 0]
-        payload = [(self.devSoftId & 0xff), ((self.devSoftId >> 8) & 0xff), (self.conSoftId & 0xff), ((self.conSoftId >> 8) & 0xff), 0x40, 0x80, 0, num, start & 0xff, (start >> 8) & 0xff]
+        payload = [(self.devSoftId & 0xff), ((self.devSoftId >> 8) & 0xff), (self.conSoftId & 0xff), ((self.conSoftId >> 8) & 0xff), 0x40, 0x80, 0, num & 0xff, start & 0xff, (start >> 8) & 0xff]
         calcCrc16 = crc16(payload)
         payload.append((calcCrc16 >> 8) & 0xff)
         payload.append(calcCrc16 & 0xff)
