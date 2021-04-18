@@ -91,7 +91,7 @@ class BaseDevice:
                 ret[name] = bool(val & 1)
             val = val >> 1
 
-    def parseStatusRegisters(self, m, regstart, reglen, unknown=False):
+    def parseRegisters(self, m, regstart, reglen, unknown=False):
         ret = {}
 
         skip = 0
@@ -190,7 +190,7 @@ class BaseDevice:
     #
     # 1. The device sends a query to the controller to read 20 registers starting from address 100.
     # 2. The controller responds, it always seems to be the same. It's hard to say if there is a controller model or a serial number.
-    # 3. The device sends a record of 92 or 104 registers starting at address 120. This is the main message, there are temperatures there. After this message there is a long pause (which is quite a large part of the 140ms for a series of messages), probably the controller is not too fast to write it to memory and it takes longer. The exact number of records depends on the model and firmware of the device.
+    # 3. The device sends a record of registers starting at address 120. This is the main message, there are temperatures there. After this message there is a long pause (which is quite a large part of the 140ms for a series of messages), probably the controller is not too fast to write it to memory and it takes longer. The exact number of records depends on the model and firmware of the device.
     # 4. The controller replies with the standard message 0x70 that the bytes have been written successfully.
     # 5. The device requests to read 4 bytes starting from address 252.
     # 6. The controller responds and returns 4 bytes. By default they are: 10000000 and they mean that the controller is working normally, there are no changes. The value 08000000 means that the controller is turned off. However, the value 11000000 means that the user has changed a parameter in the menu, at this point the communication scheme is different, described below.
@@ -259,6 +259,17 @@ class BaseDevice:
         r = ser.read(1000)
         return self.processAllMessages(r)
 
+    def readStatusRegisters(self, ser):
+        start = self.REG_STATUS_START
+        return self.readRegisters(ser, start, self.REG_CONFIG_START - start)
+
+    def readConfigRegisters(self, ser):
+        start = self.REG_CONFIG_START
+        while start < self.REG_MAX_ADR:
+            num = min(self.REG_MAX_ADR + 2 - start, self.REG_MAX_NUM)
+            self.readRegisters(ser, start, num)
+            start = start + num
+
     def writeRegister(self, ser, reg, val):
         m = self.createWriteRegisterMessage(reg, val)
         ser.flushInput()
@@ -271,13 +282,35 @@ class BaseDevice:
 # Interface to implement in child classes
 #########################################
 
-    registers = {}
+    # Registers are divided in read-only status registers and read/write config registers
 
-    def readStatusRegisters(self, ser):
-        raise NotImplementedError
+    # The lowest readable register always seems to be 100
+    REG_MIN_ADR = 100
 
-    def disable(self, ser):
-        raise NotImplementedError
+    # The highest readable register varies per device
+    REG_MAX_ADR = None
 
-    def enable(self, ser):
-        raise NotImplementedError
+    # The number of registers which can be read in one message varies per device
+    REG_MAX_NUM = None
+
+    # Status registers start at 120 usually
+    REG_STATUS_START = 120
+
+    # Config registers start at a register which varies per device
+    REG_CONFIG_START = None
+
+    registers = {
+#
+#        # Status registers
+#        120: { 'type': 'date', 'name': 'date' },                        # Date
+#        124: { 'type': 'time', 'name': 'time' },                        # Time
+#        128: { 'type': 'te10', 'name': 'T1' },                          # T1
+#        130: { 'type': 'te10', 'name': 'T2' },                          # T2
+#        132: { 'type': 'te10', 'name': 'T3' },                          # T3
+#        ...
+#
+#        # Config registers
+#        XXX: { 'type': 'word', 'name': 'InstallationScheme' },          # Installation Scheme
+#        ...
+#
+    }

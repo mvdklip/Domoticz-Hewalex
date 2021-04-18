@@ -5,7 +5,13 @@ from .base import BaseDevice
 
 
 class PCWU(BaseDevice):
+    REG_MAX_ADR = 536
+    REG_MAX_NUM = 226
+    REG_CONFIG_START = 302
+
     registers = {
+
+        # Status registers
         120: { 'type': 'date', 'name': 'date' },                        # Date
         124: { 'type': 'time', 'name': 'time' },                        # Time
         128: { 'type': 'te10', 'name': 'T1' },                          # T1 (Ambient temp)
@@ -21,6 +27,7 @@ class PCWU(BaseDevice):
         198: { 'type': 'word', 'name': 'EV1' },
         202: { 'type': 'word', 'name': 'WaitingStatus' },
 
+        # Config registers
         302: { 'type': 'word', 'name': 'InstallationScheme' },          # Installation Scheme (1-9)
         304: { 'type': 'bool', 'name': 'HeatPumpEnabled' },             # Heat Pump Enabled (True/False)
         306: { 'type': 'word', 'name': 'TapWaterSensor' },              # Tap Water Sensor (0=T2, 1=T3, 2=T7)
@@ -35,15 +42,8 @@ class PCWU(BaseDevice):
         334: { 'type': 'te10', 'name': 'DefrostingStartTemp' },         # Defrosting Start Temp
         336: { 'type': 'te10', 'name': 'DefrostingStopTemp' },          # Defrosting Stop Temp
         338: { 'type': 'word', 'name': 'DefrostingMaxTime' },           # Defrosting Max Time (min)
-    }
 
-    def readStatusRegisters(self, ser):
-        # we can read registers between 100 and 536
-        # we can read max 226 registers at a time
-        # registers below 256 (dubbed 'status registers') are read-only
-        # the most interesting registers start at 120
-        # in eavesdropping mode some pumps send 92 registers, others send 104; why is unknown
-        return self.readRegisters(ser, 120, 92)
+    }
 
     def disable(self, ser):
         return self.writeRegister(ser, 304, 0)

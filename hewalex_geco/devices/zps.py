@@ -5,7 +5,13 @@ from .base import BaseDevice
 
 
 class ZPS(BaseDevice):
+    REG_MAX_ADR = 330
+    REG_MAX_NUM = 76
+    REG_CONFIG_START = 170
+
     registers = {
+
+        # Status registers
         120: { 'type': 'date', 'name': 'date' },                        # Date
         124: { 'type': 'time', 'name': 'time' },                        # Time
         128: { 'type': 'temp', 'name': 'T1' },                          # T1 (Collectors temp)
@@ -25,6 +31,8 @@ class ZPS(BaseDevice):
         ]},
         156: { 'type': 'word', 'name': 'CollectorPumpSpeed' },          # Collector Pump Speed (0-15)
         166: { 'type': 'fl10', 'name': 'TotalEnergy' },                 # Total Energy (kWh)
+
+        # Config registers
         170: { 'type': 'word', 'name': 'InstallationScheme' },          # Installation Scheme (1-19)
         172: { 'type': 'word', 'name': 'DisplayTimeout' },              # Display Timeout (1-10 min)
         174: { 'type': 'word', 'name': 'DisplayBrightness' },           # Display Brightness (1-10)
@@ -82,11 +90,3 @@ class ZPS(BaseDevice):
         328: { 'type': 'word', 'name': 'CirculationPumpONTime' },       # Circulation Pump ON Time (1-59 min)
         330: { 'type': 'word', 'name': 'CirculationPumpOFFTime' },      # Circulation Pump OFF Time (1-59 min)
     }
-
-    def readStatusRegisters(self, ser):
-        # we can read registers between 100 and 330
-        # we can read max 76 registers at a time
-        # the most interesting registers start at 120
-        return self.readRegisters(ser, 120, 76)
-        #return self.readRegisters(ser, 196, 76)
-        #return self.readRegisters(ser, 272, 60)
