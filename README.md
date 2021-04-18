@@ -12,7 +12,6 @@ RS485 to Wi-Fi device setup and either eavesdropping on the communication betwee
 ### Solar pumps (ZPS)
 
 RS485 to Wi-Fi device setup and connected to the RS485 port on the backside of the G-422 controller. https://github.com/mvdklip/hewalex-geco-protocol/tree/main/docs/ZPS for more information.
-Not implemented yet.
 
 ## Installation
 
