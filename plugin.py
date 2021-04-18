@@ -8,7 +8,7 @@
 # https://github.com/aelias-eu/hewalex-geco-protocol
 
 """
-<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.5.0">
+<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.5.1">
     <description>
         <h2>Hewalex Plugin</h2><br/>
         <h3>Features</h3>
@@ -105,11 +105,11 @@ class BasePlugin:
             if len(Devices) < 4:
                 Domoticz.Device(Name="T4 (tank top)", Unit=4, TypeName='Temperature').Create()
             if len(Devices) < 5:
-                Domoticz.Device(Name="SWH kWh total", Unit=5, TypeName='Custom', Options={'Custom': '1;kWh'}).Create()
+                Domoticz.Device(Name="SWH kWh Total", Unit=5, TypeName='Custom', Options={'Custom': '1;kWh'}).Create()
             if len(Devices) < 6:
-                Domoticz.Device(Name="SWH generation", Unit=6, TypeName='kWh', Switchtype=4).Create()
+                Domoticz.Device(Name="SWH Generation", Unit=6, TypeName='kWh', Switchtype=4).Create()
             if len(Devices) < 7:
-                Domoticz.Device(Name="Consumption", Unit=7, TypeName='kWh', Options={'EnergyMeterMode':'1'}).Create()
+                Domoticz.Device(Name="SWH Consumption", Unit=7, TypeName='kWh', Options={'EnergyMeterMode':'1'}).Create()
 
         DumpConfigToLog()
 
