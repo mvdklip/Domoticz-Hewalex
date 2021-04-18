@@ -21,7 +21,7 @@ class ZPS(BaseDevice):
         130: { 'type': 'temp', 'name': 'T2' },                          # T2 (Tank bottom temp)
         132: { 'type': 'temp', 'name': 'T3' },                          # T3 (Air separator temp)
         134: { 'type': 'temp', 'name': 'T4' },                          # T4 (Tank top temp)
-        136: { 'type': 'temp', 'name': 'T5' },                          # T5
+        136: { 'type': 'temp', 'name': 'T5' },                          # T5 (Boiler outlet temp)
         138: { 'type': 'temp', 'name': 'T6' },                          # T6
         144: { 'type': 'word', 'name': 'CollectorPower' },              # Collector Power (W)
         148: { 'type': 'fl10', 'name': 'Consumption' },                 # Consumption (W)

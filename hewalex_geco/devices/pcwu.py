@@ -20,11 +20,11 @@ class PCWU(BaseDevice):
         128: { 'type': 'te10', 'name': 'T1' },                          # T1 (Ambient temp)
         130: { 'type': 'te10', 'name': 'T2' },                          # T2 (Tank bottom temp)
         132: { 'type': 'te10', 'name': 'T3' },                          # T3 (Tank top temp)
-        138: { 'type': 'te10', 'name': 'T6' },                          # T6 (HP water inlet)
-        140: { 'type': 'te10', 'name': 'T7' },                          # T7 (HP water outlet)
-        142: { 'type': 'te10', 'name': 'T8' },                          # T8 (HP evaporator)
-        144: { 'type': 'te10', 'name': 'T9' },                          # T9 (HP before compressor)
-        146: { 'type': 'te10', 'name': 'T10' },                         # T10 (HP after compressor)
+        138: { 'type': 'te10', 'name': 'T6' },                          # T6 (HP water inlet temp)
+        140: { 'type': 'te10', 'name': 'T7' },                          # T7 (HP water outlet temp)
+        142: { 'type': 'te10', 'name': 'T8' },                          # T8 (HP evaporator temp)
+        144: { 'type': 'te10', 'name': 'T9' },                          # T9 (HP before compressor temp)
+        146: { 'type': 'te10', 'name': 'T10' },                         # T10 (HP after compressor temp)
 
         194: { 'type': 'bool', 'name': 'IsManual' },
         198: { 'type': 'word', 'name': 'EV1' },
