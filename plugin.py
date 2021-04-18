@@ -8,7 +8,7 @@
 # https://github.com/aelias-eu/hewalex-geco-protocol
 
 """
-<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.4.3">
+<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.5.0">
     <description>
         <h2>Hewalex Plugin</h2><br/>
         <h3>Features</h3>
@@ -105,7 +105,11 @@ class BasePlugin:
             if len(Devices) < 4:
                 Domoticz.Device(Name="T4 (tank top)", Unit=4, TypeName='Temperature').Create()
             if len(Devices) < 5:
-                Domoticz.Device(Name="kWh total", Unit=5, TypeName='Custom', Options={'Custom': '1;kWh'}).Create()
+                Domoticz.Device(Name="SWH kWh total", Unit=5, TypeName='Custom', Options={'Custom': '1;kWh'}).Create()
+            if len(Devices) < 6:
+                Domoticz.Device(Name="SWH generation", Unit=6, TypeName='kWh', Switchtype=4).Create()
+            if len(Devices) < 7:
+                Domoticz.Device(Name="Consumption", Unit=7, TypeName='kWh', Options={'EnergyMeterMode':'1'}).Create()
 
         DumpConfigToLog()
 
@@ -143,6 +147,10 @@ class BasePlugin:
                 Devices[4].Update(nValue=0, sValue=str(mp['T4']))
             if 'TotalEnergy' in mp:
                 Devices[5].Update(nValue=0, sValue=str(mp['TotalEnergy']))
+                if 'CollectorPower' in mp:
+                    Devices[6].Update(nValue=0, sValue=str(mp['CollectorPower'])+";"+str(mp['TotalEnergy'] * 1000))
+            if 'Consumption' in mp:
+                Devices[7].Update(nValue=0, sValue=str(mp['Consumption'])+";0")
 
     def onCommand(self, Unit, Command, Level, Hue):
         Domoticz.Debug("onCommand called for unit %d with command %s, level %s." % (Unit, Command, Level))
