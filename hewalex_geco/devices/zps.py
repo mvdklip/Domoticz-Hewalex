@@ -5,6 +5,9 @@ from .base import BaseDevice
 
 
 class ZPS(BaseDevice):
+
+    # ZPS is driven by G-422-P09 (controller)
+    # Below are the registers for the controller, so including controller settings
     REG_MAX_ADR = 330
     REG_MAX_NUM = 76
     REG_CONFIG_START = 170
