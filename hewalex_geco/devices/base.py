@@ -193,7 +193,7 @@ class BaseDevice:
     # 3. The device sends a record of registers starting at address 120. This is the main message, there are temperatures there. After this message there is a long pause (which is quite a large part of the 140ms for a series of messages), probably the controller is not too fast to write it to memory and it takes longer. The exact number of records depends on the model and firmware of the device.
     # 4. The controller replies with the standard message 0x70 that the bytes have been written successfully.
     # 5. The device requests to read 4 bytes starting from address 252.
-    # 6. The controller responds and returns 4 bytes. By default they are: 10000000 and they mean that the controller is working normally, there are no changes. The value 08000000 means that the controller is turned off. However, the value 11000000 means that the user has changed a parameter in the menu, at this point the communication scheme is different, described below.
+    # 6. The controller responds and returns 4 bytes. By default they are: 10000000 and they mean that the controller is working normally, there are no changes. The value 08000000 means that the controller is turned off. However, the value 11000000 means that the user has changed a parameter in the menu, at this point the communication scheme is different, described in the docs.
     #
     def eavesDrop(self, ser, numCycles=None):
         # window size and time (based on 140ms cycle and 360ms wait)

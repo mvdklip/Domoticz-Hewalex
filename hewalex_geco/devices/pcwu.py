@@ -12,6 +12,20 @@ class PCWU(BaseDevice):
     REG_MAX_NUM = 226
     REG_CONFIG_START = 302
 
+    # Interaction between status register 202 and config register 304:
+    #
+    # When talking to the executive module directly the heat pump can be (manually)
+    # disabled and enabled through config register 304 and the result of this is visible
+    # in status register 202. With the controller on this works as expected, the heat
+    # pump can be put into a waiting mode where it will not turn on until enabled again
+    # through register 304. With the controller off however this doesn't work. Maybe
+    # the executive module is hardcoded to not turn the heat pump on when the controller
+    # is off? See eavesDrop function in base device to learn how the executive module
+    # knows that the controller is off. What makes this especially weird is that register
+    # 202 changes its value to 0 when the controller is off even if register 304 says
+    # otherwise. It would be great if we could detect the 'controller is off' situation
+    # through one of the registers, but I haven't found a way yet.
+
     registers = {
 
         # Status registers
@@ -27,8 +41,23 @@ class PCWU(BaseDevice):
         146: { 'type': 'te10', 'name': 'T10' },                         # T10 (HP after compressor temp)
 
         194: { 'type': 'bool', 'name': 'IsManual' },
+        196: { 'type': 'mask', 'name': [
+            'FanON',                                                    # Fan ON (True/False)
+            None,
+            'CirculationPumpON',                                        # Circulation pump ON (True/False)
+            None,
+            None,
+            'HeatPumpON',                                               # Heat pump ON (True/False)
+            None,
+            None,
+            None,
+            None,
+            None,
+            'CompressorON',                                             # Compressor ON (True/False)
+            'HeaterEON',                                                # Heater E ON (True/False)
+        ]},
         198: { 'type': 'word', 'name': 'EV1' },
-        202: { 'type': 'word', 'name': 'WaitingStatus' },
+        202: { 'type': 'word', 'name': 'WaitingStatus' },               # 0 when available for operation, 2 when disabled through register 304
 
         # Config registers
         302: { 'type': 'word', 'name': 'InstallationScheme' },          # Installation Scheme (1-9)

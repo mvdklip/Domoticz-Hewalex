@@ -8,7 +8,7 @@
 # https://github.com/aelias-eu/hewalex-geco-protocol
 
 """
-<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.5.1">
+<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.5.2">
     <description>
         <h2>Hewalex Plugin</h2><br/>
         <h3>Features</h3>
@@ -129,7 +129,7 @@ class BasePlugin:
             if 'T3' in mp:
                 Devices[3].Update(nValue=0, sValue=str(mp['T3']))
             if 'WaitingStatus' in mp:
-                newValue = int(mp['WaitingStatus'] != 2)
+                newValue = int(mp['WaitingStatus'] == 0)
                 if newValue != Devices[4].nValue:
                     Devices[4].Update(nValue=newValue, sValue="")
 
