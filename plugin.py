@@ -8,7 +8,7 @@
 # https://github.com/aelias-eu/hewalex-geco-protocol
 
 """
-<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.5.2">
+<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.5.3">
     <description>
         <h2>Hewalex Plugin</h2><br/>
         <h3>Features</h3>
@@ -110,6 +110,8 @@ class BasePlugin:
                 Domoticz.Device(Name="SWH Generation", Unit=6, TypeName='kWh', Switchtype=4).Create()
             if len(Devices) < 7:
                 Domoticz.Device(Name="SWH Consumption", Unit=7, TypeName='kWh', Options={'EnergyMeterMode':'1'}).Create()
+            if len(Devices) < 8:
+                Domoticz.Device(Name="Night Cooling Enabled", Unit=8, TypeName='Switch', Image=9).Create()
 
         DumpConfigToLog()
 
@@ -151,16 +153,33 @@ class BasePlugin:
                     Devices[6].Update(nValue=0, sValue=str(mp['CollectorPower'])+";"+str(mp['TotalEnergy'] * 1000))
             if 'Consumption' in mp:
                 Devices[7].Update(nValue=0, sValue=str(mp['Consumption'])+";0")
+            if 'NightCoolingEnabled' in mp:
+                newValue = int(mp['NightCoolingEnabled'] == 1)
+                if newValue != Devices[8].nValue:
+                    Devices[8].Update(nValue=newValue, sValue="")
 
     def onCommand(self, Unit, Command, Level, Hue):
         Domoticz.Debug("onCommand called for unit %d with command %s, level %s." % (Unit, Command, Level))
-        if (Unit == 4) and (Command == "On") and (self.devMode == 2):
-            SendCommand(self, 'enable')
-            Devices[Unit].Update(nValue=1, sValue="")   # TODO - check if device is actually switched on
-        elif (Unit == 4) and (Command == "Off") and (self.devMode == 2):
-            SendCommand(self, 'disable')                # TODO - ... or off
-            Devices[Unit].Update(nValue=0, sValue="")
-        return True
+
+        # PCWU commands
+        if (self.devMode == 2):
+            if (Unit == 4) and (Command == "On"):
+                SendCommand(self, 'enable')
+                Devices[Unit].Update(nValue=1, sValue="")
+            elif (Unit == 4) and (Command == "Off"):
+                SendCommand(self, 'disable')
+                Devices[Unit].Update(nValue=0, sValue="")
+
+        # ZPS commands
+        elif (self.devMode == 3):
+            if (Unit == 8) and (Command == "On"):
+                SendCommand(self, 'enableNightCooling')
+                Devices[Unit].Update(nValue=1, sValue="")
+            elif (Unit == 8) and (Command == "Off"):
+                SendCommand(self, 'disableNightCooling')
+                Devices[Unit].Update(nValue=0, sValue="")
+
+        return True     # TODO - check if command actually succeeded
 
     def onHeartbeat(self):
         Domoticz.Debug("onHeartbeat called %d" % self.lastPolled)
@@ -169,9 +188,10 @@ class BasePlugin:
             attempt = 1
 
             while True:
-                if 1 < attempt < self.maxAttempts:
-                    Domoticz.Debug("Previous attempt failed, trying again...")
-                if attempt >= self.maxAttempts:
+                if attempt <= self.maxAttempts:
+                    if attempt > 1:
+                        Domoticz.Debug("Previous attempt failed, trying again...")
+                else:
                     Domoticz.Error("Failed to retrieve data from %s, cancelling..." % self.baseUrl)
                     break
                 attempt += 1
@@ -179,8 +199,11 @@ class BasePlugin:
                 try:
                     if (self.devMode == 1):
                         SendCommand(self, 'eavesDrop')
-                    elif (self.devMode == 2) or (self.devMode == 3):
+                    elif (self.devMode == 2):
                         SendCommand(self, 'readStatusRegisters')
+                    elif (self.devMode == 3):
+                        SendCommand(self, 'readStatusRegisters')
+                        SendCommand(self, 'readConfigRegisters')
                 except Exception as e:
                     Domoticz.Log("Exception from %s; %s" % (self.baseUrl, e))
                 else:
@@ -223,12 +246,9 @@ def SendCommand(plugin, command):
     if dev:
         if (command == 'eavesDrop'):
             dev.eavesDrop(ser, 1)
-        elif (command == 'readStatusRegisters'):
-            dev.readStatusRegisters(ser)
-        elif (command == 'disable'):
-            dev.disable(ser)
-        elif (command == 'enable'):
-            dev.enable(ser)
+        else:
+            command_method = getattr(dev, command)
+            command_method(ser)
 
     ser.close()
 

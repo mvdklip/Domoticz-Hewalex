@@ -95,3 +95,9 @@ class ZPS(BaseDevice):
         312: { 'type': 'dwrd', 'name': 'TotalOperationTime' },          # Total Operation Time (min) - lives in config space but is status register
         320: { 'type': 'word', 'name': 'Reg320' },                      # Unknown register - value changes constantly
     }
+
+    def disableNightCooling(self, ser):
+        return self.writeRegister(ser, 240, 0)
+
+    def enableNightCooling(self, ser):
+        return self.writeRegister(ser, 240, 1)

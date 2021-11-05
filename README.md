@@ -1,7 +1,7 @@
 # Domoticz-Hewalex
 Domoticz plugin to integrate Hewalex heat and solar pumps
 
-Tested with Python version 3.8, Domoticz version 2020.2 stable
+Tested with Python version 3.8, Domoticz versions 2020.2 and 2021.1
 
 ## Prerequisites
 

@@ -25,6 +25,11 @@ class PCWU(BaseDevice):
     # 202 changes its value to 0 when the controller is off even if register 304 says
     # otherwise. It would be great if we could detect the 'controller is off' situation
     # through one of the registers, but I haven't found a way yet.
+    #
+    # Update Nov 2021: suddenly my PCWU needs a value of 2 to be written to register 304
+    # to turn on. Before it would accept a value of 1. I have checked the parameters and
+    # nothing seems changed so it's a mystery why this register now needs a different
+    # value written to it.
 
     registers = {
 
@@ -40,7 +45,10 @@ class PCWU(BaseDevice):
         144: { 'type': 'te10', 'name': 'T9' },                          # T9 (HP before compressor temp)
         146: { 'type': 'te10', 'name': 'T10' },                         # T10 (HP after compressor temp)
 
-        194: { 'type': 'bool', 'name': 'IsManual' },
+        166: { 'type': 'word', 'name': 'unknown5' },                    # Unknown, seems fixed to a '1' value for krzysztof1111111111, '3' for me
+        192: { 'type': 'word', 'name': 'unknown3' },                    # Unknown, seems fixed to a '49663' value for krzysztof1111111111, '50175' for me, which is only 1 bit different...
+        194: { 'type': 'word', 'name': 'IsManual' },                    # Unknown, seems fixed to a '2' value but was documented by krzysztof1111111111 as:
+                                                                        # "Normally 2 appears here when manual control is on in the menu 3"
         196: { 'type': 'mask', 'name': [
             'FanON',                                                    # Fan ON (True/False)
             None,
@@ -56,8 +64,13 @@ class PCWU(BaseDevice):
             'CompressorON',                                             # Compressor ON (True/False)
             'HeaterEON',                                                # Heater E ON (True/False)
         ]},
-        198: { 'type': 'word', 'name': 'EV1' },
-        202: { 'type': 'word', 'name': 'WaitingStatus' },               # 0 when available for operation, 2 when disabled through register 304
+        198: { 'type': 'word', 'name': 'EV1' },                         # Expansion Valve 1? - Otwarcie zaworu rozprężnego - Opening of the expansion valve
+        202: { 'type': 'word', 'name': 'WaitingStatus' },               # 0 when available for operation, 2 when disabled through register 304, 4 when low COP
+        206: { 'type': 'word', 'name': 'unknown6' },                    # Unknown, seems fixed to a '0' value and is possibly related to alarms
+        210: { 'type': 'word', 'name': 'unknown7' },                    # Unknown, seems fixed to a '0' value and is possibly related to alarms
+        218: { 'type': 'word', 'name': 'unknown8' },                    # Unknown, seems fixed to a '0' value for the executive module
+        220: { 'type': 'word', 'name': 'unknown9' },                    # Unknown, seems fixed to a '0' value for the executive module
+        222: { 'type': 'word', 'name': 'unknown10' },                   # Unknown, seems fixed to a '0' value for the executive module
 
         # Config registers
         302: { 'type': 'word', 'name': 'InstallationScheme' },          # Installation Scheme (1-9)
@@ -95,4 +108,4 @@ class PCWU(BaseDevice):
         return self.writeRegister(ser, 304, 0)
 
     def enable(self, ser):
-        return self.writeRegister(ser, 304, 1)
+        return self.writeRegister(ser, 304, 2)
