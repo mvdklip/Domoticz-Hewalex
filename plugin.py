@@ -8,7 +8,7 @@
 # https://github.com/aelias-eu/hewalex-geco-protocol
 
 """
-<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.5.3">
+<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.5.4">
     <description>
         <h2>Hewalex Plugin</h2><br/>
         <h3>Features</h3>
@@ -60,7 +60,8 @@ class BasePlugin:
     lastPolled = 0
     baseUrl = None
     maxAttempts = 3
-    devMode = None
+    devMode = None      # Operating mode of device (1 = PCWU - Eavesdropping, 2 = PCWU - Direct comms, 3 = ZPS - Direct comms)
+    devReady = False    # Is device ready to accept commands?
 
     # Controller (Master)
     conHardId = 1
@@ -130,10 +131,25 @@ class BasePlugin:
                 Devices[2].Update(nValue=0, sValue=str(mp['T2']))
             if 'T3' in mp:
                 Devices[3].Update(nValue=0, sValue=str(mp['T3']))
-            if 'WaitingStatus' in mp:
-                newValue = int(mp['WaitingStatus'] == 0)
-                if newValue != Devices[4].nValue:
-                    Devices[4].Update(nValue=newValue, sValue="")
+            if self.devMode == 1:
+                if 'WaitingStatus' in mp:
+                    newValue = int(mp['WaitingStatus'] == 0)
+                    if newValue != Devices[4].nValue:
+                        Devices[4].Update(nValue=newValue, sValue="")
+                self.devReady = False
+            elif self.devMode == 2:
+                if 'HeatPumpEnabled' in mp:
+                    newValue = int(mp['HeatPumpEnabled'])
+                    if newValue != Devices[4].nValue:
+                        Devices[4].Update(nValue=newValue, sValue="")
+                if ('IsManual' in mp and 'WaitingStatus' in mp and 'WaitingTimer' in mp):
+                    self.devReady = (
+                        mp['IsManual'] == 2
+                        and
+                        (mp['WaitingStatus'] == 0 or mp['WaitingStatus'] == 2)
+                        and
+                        mp['WaitingTimer'] == 0
+                    )
 
     def onMessageZPS(self, dev, h, sh, m):
         Domoticz.Debug("onMessageZPS called")
@@ -154,32 +170,39 @@ class BasePlugin:
             if 'Consumption' in mp:
                 Devices[7].Update(nValue=0, sValue=str(mp['Consumption'])+";0")
             if 'NightCoolingEnabled' in mp:
-                newValue = int(mp['NightCoolingEnabled'] == 1)
+                newValue = int(mp['NightCoolingEnabled'])
                 if newValue != Devices[8].nValue:
                     Devices[8].Update(nValue=newValue, sValue="")
+            self.devReady = False
 
     def onCommand(self, Unit, Command, Level, Hue):
         Domoticz.Debug("onCommand called for unit %d with command %s, level %s." % (Unit, Command, Level))
 
-        # PCWU commands
-        if (self.devMode == 2):
-            if (Unit == 4) and (Command == "On"):
-                SendCommand(self, 'enable')
-                Devices[Unit].Update(nValue=1, sValue="")
-            elif (Unit == 4) and (Command == "Off"):
-                SendCommand(self, 'disable')
-                Devices[Unit].Update(nValue=0, sValue="")
+        if self.devReady:
 
-        # ZPS commands
-        elif (self.devMode == 3):
-            if (Unit == 8) and (Command == "On"):
-                SendCommand(self, 'enableNightCooling')
-                Devices[Unit].Update(nValue=1, sValue="")
-            elif (Unit == 8) and (Command == "Off"):
-                SendCommand(self, 'disableNightCooling')
-                Devices[Unit].Update(nValue=0, sValue="")
+            # PCWU commands
+            if (self.devMode == 2):
+                if (Unit == 4) and (Command == "On"):
+                    SendCommand(self, 'enable')
+                    Devices[Unit].Update(nValue=1, sValue="")
+                elif (Unit == 4) and (Command == "Off"):
+                    SendCommand(self, 'disable')
+                    Devices[Unit].Update(nValue=0, sValue="")
 
-        return True     # TODO - check if command actually succeeded
+            # ZPS commands
+            elif (self.devMode == 3):
+                if (Unit == 8) and (Command == "On"):
+                    SendCommand(self, 'enableNightCooling')
+                    Devices[Unit].Update(nValue=1, sValue="")
+                elif (Unit == 8) and (Command == "Off"):
+                    SendCommand(self, 'disableNightCooling')
+                    Devices[Unit].Update(nValue=0, sValue="")
+
+            return True     # TODO - check if command actually succeeded
+
+        else:
+            Domoticz.Debug("Device is not ready, ignoring command...")
+            return False
 
     def onHeartbeat(self):
         Domoticz.Debug("onHeartbeat called %d" % self.lastPolled)
@@ -201,11 +224,13 @@ class BasePlugin:
                         SendCommand(self, 'eavesDrop')
                     elif (self.devMode == 2):
                         SendCommand(self, 'readStatusRegisters')
+                        SendCommand(self, 'readConfigRegisters')
                     elif (self.devMode == 3):
                         SendCommand(self, 'readStatusRegisters')
                         SendCommand(self, 'readConfigRegisters')
                 except Exception as e:
                     Domoticz.Log("Exception from %s; %s" % (self.baseUrl, e))
+                    self.devReady = False
                 else:
                     break
 

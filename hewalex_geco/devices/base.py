@@ -161,7 +161,9 @@ class BaseDevice:
             }
         })
 
-    def processMessage(self, m, ignoreTooShort):
+    def processMessage(self, m, ignoreTooShort, onMessage=None):
+        if onMessage is None:
+            onMessage = self.onMessage
         h = self.parseHardHeader(m)
         self.validateHardHeader(h)
         ml = h["Payload"]
@@ -169,15 +171,15 @@ class BaseDevice:
             return m
         sh = self.parseSoftHeader(h, m[8:ml+8])
         self.validateSoftHeader(h, sh)
-        if self.onMessage:
-            self.onMessage(self, h, sh, m)
+        if onMessage:
+            onMessage(self, h, sh, m)
         return m[ml+8:]
 
-    def processAllMessages(self, m, returnRemainingBytes=False):
+    def processAllMessages(self, m, returnRemainingBytes=False, onMessage=None):
         minLen = 8 if returnRemainingBytes else 0
         prevLen = len(m)
         while prevLen > minLen:
-            m = self.processMessage(m, returnRemainingBytes)
+            m = self.processMessage(m, ignoreTooShort=returnRemainingBytes, onMessage=onMessage)
             if len(m) == prevLen:
                 if returnRemainingBytes:
                     return m
@@ -195,7 +197,7 @@ class BaseDevice:
     # 5. The device requests to read 4 bytes starting from address 252.
     # 6. The controller responds and returns 4 bytes. By default they are: 10000000 and they mean that the controller is working normally, there are no changes. The value 08000000 means that the controller is turned off. However, the value 11000000 means that the user has changed a parameter in the menu, at this point the communication scheme is different, described in the docs.
     #
-    def eavesDrop(self, ser, numCycles=None):
+    def eavesDrop(self, ser, numCycles=None, onMessage=None):
         # window size and time (based on 140ms cycle and 360ms wait)
         winSize = 1000
         winTime = 0.4
@@ -227,7 +229,7 @@ class BaseDevice:
             m = ser.read(winSize)
 
             # process
-            self.processAllMessages(s + m)
+            self.processAllMessages(s + m, onMessage=onMessage)
 
     def createReadRegistersMessage(self, start, num):
         header = [0x69, self.devHardId, self.conHardId, 0x84, 0, 0]
@@ -251,32 +253,35 @@ class BaseDevice:
         header.append(calcCrc8)
         return bytearray(header + payload)
 
-    def readRegisters(self, ser, start, num):
+    def readRegisters(self, ser, start, num, onMessage=None):
         m = self.createReadRegistersMessage(start, num)
         ser.flushInput()
         ser.timeout = 0.4
         ser.write(m)
         r = ser.read(1000)
-        return self.processAllMessages(r)
+        return self.processAllMessages(r, onMessage=onMessage)
 
-    def readStatusRegisters(self, ser):
+    def readStatusRegisters(self, ser, onMessage=None):
         start = self.REG_STATUS_START
-        return self.readRegisters(ser, start, self.REG_CONFIG_START - start)
+        return self.readRegisters(ser, start, self.REG_CONFIG_START - start, onMessage=onMessage)
 
-    def readConfigRegisters(self, ser):
+    def readConfigRegisters(self, ser, onMessage=None):
         start = self.REG_CONFIG_START
         while start < self.REG_MAX_ADR:
             num = min(self.REG_MAX_ADR + 2 - start, self.REG_MAX_NUM)
-            self.readRegisters(ser, start, num)
+            self.readRegisters(ser, start, num, onMessage=onMessage)
             start = start + num
 
-    def writeRegister(self, ser, reg, val):
+    def readRegister(self, ser, reg, onMessage=None):
+        return self.readRegisters(ser, reg, 2, onMessage=onMessage)
+
+    def writeRegister(self, ser, reg, val, onMessage=None):
         m = self.createWriteRegisterMessage(reg, val)
         ser.flushInput()
         ser.timeout = 0.4
         ser.write(m)
         r = ser.read(1000)
-        return self.processAllMessages(r)
+        return self.processAllMessages(r, onMessage=onMessage)
 
 
 # Interface to implement in child classes

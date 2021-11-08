@@ -12,24 +12,22 @@ class PCWU(BaseDevice):
     REG_MAX_NUM = 226
     REG_CONFIG_START = 302
 
-    # Interaction between status register 202 and config register 304:
+    # Interaction between status registers 194 and 202 and config register 304:
     #
     # When talking to the executive module directly the heat pump can be (manually)
     # disabled and enabled through config register 304 and the result of this is visible
     # in status register 202. With the controller on this works as expected, the heat
     # pump can be put into a waiting mode where it will not turn on until enabled again
-    # through register 304. With the controller off however this doesn't work. Maybe
-    # the executive module is hardcoded to not turn the heat pump on when the controller
-    # is off? See eavesDrop function in base device to learn how the executive module
-    # knows that the controller is off. What makes this especially weird is that register
-    # 202 changes its value to 0 when the controller is off even if register 304 says
-    # otherwise. It would be great if we could detect the 'controller is off' situation
-    # through one of the registers, but I haven't found a way yet.
+    # through register 304. With the controller off however this doesn't work. It looks
+    # like the executive module is hardcoded to not turn the heat pump on as long as the
+    # controller is off. See eavesDrop function in base device to learn how the executive
+    # module knows that the controller is off. This situation can be read from register
+    # 194 (IsManual), so for a full status multiple registers should be checked.
     #
-    # Update Nov 2021: suddenly my PCWU needs a value of 2 to be written to register 304
-    # to turn on. Before it would accept a value of 1. I have checked the parameters and
-    # nothing seems changed so it's a mystery why this register now needs a different
-    # value written to it.
+    # For some reason writing a 1 to register 304 sometimes disables instead of enables
+    # the heatpump. Since I've started writing value 255 instead this hasn't happened
+    # anymore. I suspect some sort of bitmask when writing to this register but I don't
+    # know the meaning.
 
     registers = {
 
@@ -47,8 +45,7 @@ class PCWU(BaseDevice):
 
         166: { 'type': 'word', 'name': 'unknown5' },                    # Unknown, seems fixed to a '1' value for krzysztof1111111111, '3' for me
         192: { 'type': 'word', 'name': 'unknown3' },                    # Unknown, seems fixed to a '49663' value for krzysztof1111111111, '50175' for me, which is only 1 bit different...
-        194: { 'type': 'word', 'name': 'IsManual' },                    # Unknown, seems fixed to a '2' value but was documented by krzysztof1111111111 as:
-                                                                        # "Normally 2 appears here when manual control is on in the menu 3"
+        194: { 'type': 'word', 'name': 'IsManual' },                    # Unknown, 2 when controller on, 1 when controller off
         196: { 'type': 'mask', 'name': [
             'FanON',                                                    # Fan ON (True/False)
             None,
@@ -65,8 +62,8 @@ class PCWU(BaseDevice):
             'HeaterEON',                                                # Heater E ON (True/False)
         ]},
         198: { 'type': 'word', 'name': 'EV1' },                         # Expansion Valve 1? - Otwarcie zaworu rozprężnego - Opening of the expansion valve
-        202: { 'type': 'word', 'name': 'WaitingStatus' },               # 0 when available for operation, 2 when disabled through register 304, 4 when low COP
-        206: { 'type': 'word', 'name': 'unknown6' },                    # Unknown, seems fixed to a '0' value and is possibly related to alarms
+        202: { 'type': 'word', 'name': 'WaitingStatus' },               # 0 when available for operation, 2 when disabled through register 304, 4 when low COP, 32 when just stopped and waiting to be restarted
+        206: { 'type': 'word', 'name': 'WaitingTimer' },                # Timer counting down to 0 when just stopped and waiting to be available for operation again
         210: { 'type': 'word', 'name': 'unknown7' },                    # Unknown, seems fixed to a '0' value and is possibly related to alarms
         218: { 'type': 'word', 'name': 'unknown8' },                    # Unknown, seems fixed to a '0' value for the executive module
         220: { 'type': 'word', 'name': 'unknown9' },                    # Unknown, seems fixed to a '0' value for the executive module
@@ -108,4 +105,4 @@ class PCWU(BaseDevice):
         return self.writeRegister(ser, 304, 0)
 
     def enable(self, ser):
-        return self.writeRegister(ser, 304, 2)
+        return self.writeRegister(ser, 304, 255)                        # Used to write a 1 to this register but sometimes disabled (?!) then heatpump instead of enabling it
