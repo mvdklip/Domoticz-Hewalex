@@ -8,7 +8,7 @@
 # https://github.com/aelias-eu/hewalex-geco-protocol
 
 """
-<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.5.4">
+<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.5.5">
     <description>
         <h2>Hewalex Plugin</h2><br/>
         <h3>Features</h3>
@@ -173,7 +173,8 @@ class BasePlugin:
                 newValue = int(mp['NightCoolingEnabled'])
                 if newValue != Devices[8].nValue:
                     Devices[8].Update(nValue=newValue, sValue="")
-            self.devReady = False
+            if self.devMode == 3:
+                self.devReady = True
 
     def onCommand(self, Unit, Command, Level, Hue):
         Domoticz.Debug("onCommand called for unit %d with command %s, level %s." % (Unit, Command, Level))
