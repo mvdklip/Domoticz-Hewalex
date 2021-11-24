@@ -91,6 +91,14 @@ class BaseDevice:
                 ret[name] = bool(val & 1)
             val = val >> 1
 
+    def getRegisterByNumber(self, regnum):
+        return self.registers.get(regnum, None)
+
+    def getRegisterByName(self, regname):
+        for regnum, reg in self.registers.items():
+            if reg['name'] == regname:
+                return regnum, reg
+
     def parseRegisters(self, m, regstart, reglen, unknown=False):
         ret = {}
 
@@ -99,7 +107,7 @@ class BaseDevice:
             if skip > 0:
                 skip = skip - 1
                 continue
-            reg = self.registers.get(regnum, None)
+            reg = self.getRegisterByNumber(regnum)
             adr = regnum - regstart
             if reg:
                 val = None
@@ -243,6 +251,8 @@ class BaseDevice:
         return bytearray(header + payload)
 
     def createWriteRegisterMessage(self, reg, val):
+        if isinstance(reg, str):
+            reg = self.getRegisterByName(reg)[0]
         header = [0x69, self.devHardId, self.conHardId, 0x84, 0, 0]
         payload = [(self.devSoftId & 0xff), ((self.devSoftId >> 8) & 0xff), (self.conSoftId & 0xff), ((self.conSoftId >> 8) & 0xff), 0x60, 0x80, 0, 2, reg & 0xff, (reg >> 8) & 0xff, val & 0xff, (val >> 8) & 0xff]
         calcCrc16 = crc16(payload)
@@ -254,6 +264,8 @@ class BaseDevice:
         return bytearray(header + payload)
 
     def readRegisters(self, ser, start, num, onMessage=None):
+        if isinstance(start, str):
+            start = self.getRegisterByName(start)[0]
         m = self.createReadRegistersMessage(start, num)
         ser.flushInput()
         ser.timeout = 0.4

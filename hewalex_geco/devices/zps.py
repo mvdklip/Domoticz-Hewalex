@@ -97,7 +97,7 @@ class ZPS(BaseDevice):
     }
 
     def disableNightCooling(self, ser):
-        return self.writeRegister(ser, 240, 0)
+        return self.writeRegister(ser, 'NightCoolingEnabled', 0)
 
     def enableNightCooling(self, ser):
-        return self.writeRegister(ser, 240, 1)
+        return self.writeRegister(ser, 'NightCoolingEnabled', 1)

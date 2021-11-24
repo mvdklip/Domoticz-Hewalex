@@ -44,7 +44,7 @@ class PCWU(BaseDevice):
         146: { 'type': 'te10', 'name': 'T10' },                         # T10 (HP after compressor temp)
 
         166: { 'type': 'word', 'name': 'unknown5' },                    # Unknown, seems fixed to a '1' value for krzysztof1111111111, '3' for me
-        192: { 'type': 'word', 'name': 'unknown3' },                    # Unknown, seems fixed to a '49663' value for krzysztof1111111111, '50175' for me, which is only 1 bit different...
+        192: { 'type': 'word', 'name': 'unknown3' },                    # Unknown, seems fixed to a '49663' or '50175' value, which is a difference of 512 so probably a bitmask
         194: { 'type': 'word', 'name': 'IsManual' },                    # Unknown, 2 when controller on, 1 when controller off
         196: { 'type': 'mask', 'name': [
             'FanON',                                                    # Fan ON (True/False)
@@ -102,7 +102,10 @@ class PCWU(BaseDevice):
     }
 
     def disable(self, ser):
-        return self.writeRegister(ser, 304, 0)
+        return self.writeRegister(ser, 'HeatPumpEnabled', 0)
 
     def enable(self, ser):
-        return self.writeRegister(ser, 304, 255)                        # Used to write a 1 to this register but sometimes disabled (?!) then heatpump instead of enabling it
+        return self.writeRegister(ser, 'HeatPumpEnabled', 255)          # Used to write a 1 to this register but this sometimes disabled (?!) the heatpump instead of enabling it
+
+    def setTapWaterTemp(self, ser, temp):
+        return self.writeRegister(ser, 'TapWaterTemp', int(temp * 10))

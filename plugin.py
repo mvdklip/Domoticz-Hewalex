@@ -8,7 +8,7 @@
 # https://github.com/aelias-eu/hewalex-geco-protocol
 
 """
-<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.5.5">
+<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.5.6">
     <description>
         <h2>Hewalex Plugin</h2><br/>
         <h3>Features</h3>
@@ -96,6 +96,8 @@ class BasePlugin:
                 Domoticz.Device(Name="T3 (tank top)", Unit=3, TypeName='Temperature').Create()
             if len(Devices) < 4:
                 Domoticz.Device(Name="Switch", Unit=4, TypeName='Switch', Image=9).Create()
+            if len(Devices) < 5:
+                Domoticz.Device(Name="Tap Water Temp", Unit=5, Type=242, Subtype=1).Create()
         elif (self.devMode == 3):
             if len(Devices) < 1:
                 Domoticz.Device(Name="T1 (collectors)", Unit=1, TypeName='Temperature').Create()
@@ -131,6 +133,8 @@ class BasePlugin:
                 Devices[2].Update(nValue=0, sValue=str(mp['T2']))
             if 'T3' in mp:
                 Devices[3].Update(nValue=0, sValue=str(mp['T3']))
+            if 'TapWaterTemp' in mp:
+                Devices[5].Update(nValue=0, sValue=str(mp['TapWaterTemp']))
             if self.devMode == 1:
                 if 'WaitingStatus' in mp:
                     newValue = int(mp['WaitingStatus'] == 0)
@@ -189,6 +193,9 @@ class BasePlugin:
                 elif (Unit == 4) and (Command == "Off"):
                     SendCommand(self, 'disable')
                     Devices[Unit].Update(nValue=0, sValue="")
+                elif (Unit == 5) and (Command == "Set Level"):
+                    SendCommand(self, 'setTapWaterTemp', Level)
+                    Devices[Unit].Update(nValue=0, sValue=str(Level))
 
             # ZPS commands
             elif (self.devMode == 3):
@@ -260,7 +267,7 @@ def onHeartbeat():
 
 
 # Generic helper functions
-def SendCommand(plugin, command):
+def SendCommand(plugin, command, *args, **kwargs):
     ser = serial.serial_for_url(plugin.baseUrl)
     dev = None
 
@@ -271,10 +278,10 @@ def SendCommand(plugin, command):
 
     if dev:
         if (command == 'eavesDrop'):
-            dev.eavesDrop(ser, 1)
+            dev.eavesDrop(ser, 1, *args, **kwargs)
         else:
             command_method = getattr(dev, command)
-            command_method(ser)
+            command_method(ser, *args, **kwargs)
 
     ser.close()
 
