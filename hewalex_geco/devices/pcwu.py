@@ -28,6 +28,26 @@ class PCWU(BaseDevice):
     # the heatpump. Since I've started writing value 255 instead this hasn't happened
     # anymore. I suspect some sort of bitmask when writing to this register but I don't
     # know the meaning.
+    #
+    # From the normal communication cycle between controller and executive module some
+    # special registers can be identified. These are not available through this library,
+    # but documented right here:
+    #
+    # 252: contains the status of the controller; examples:
+    #   08000000 = display off
+    #   10000000 = display on, no changes
+    #   11000000 = display on, parameter changed;
+    #       executive module responds by reading 8 controller registers starting at 256
+    #   14000000 = display on, date/time changed;
+    #       executive module responds by reading 8 controller registers starting at 120
+    #
+    # 256: contains the changed parameter in the controller; examples:
+    #   00 01 0000 0000 => Enabled, Heatpump, False
+    #   00 01 0100 0000 => Enabled, Heatpump, True
+    #   02 01 c201 0000 => TapWaterTemp, Heatpump, 45.0
+    #   02 02 a401 0000 => TapWaterTemp, Heater E, 42.0
+    #   04 01 5A00 0000 => AmbientMinTemp, Heatpump, 9.0
+    #
 
     registers = {
 
@@ -107,5 +127,5 @@ class PCWU(BaseDevice):
     def enable(self, ser):
         return self.writeRegister(ser, 'HeatPumpEnabled', 255)          # Used to write a 1 to this register but this sometimes disabled (?!) the heatpump instead of enabling it
 
-    def setTapWaterTemp(self, ser, temp):
+    def setTapWaterTemp(self, ser, temp):                               # Setting the tap water temp doesn't always function properly; disables the heatpump sometimes?!
         return self.writeRegister(ser, 'TapWaterTemp', int(temp * 10))

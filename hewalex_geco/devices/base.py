@@ -42,6 +42,9 @@ class BaseDevice:
         if h["To"] == h["From"]:
             raise Exception("From and To Hard Address Equal")
 
+    def getByte(self, w):
+        return int(w[0])
+
     def getWord(self, w):
         return (w[1] << 8) | w[0]
 
@@ -143,7 +146,12 @@ class BaseDevice:
                     skip = 1
                 ret[reg['name']] = val
             elif unknown:
-                ret["Reg%d" % regnum] = self.getWord(m[adr:])
+                val = m[adr:]
+                if len(val) > 1:
+                    val = self.getWord(val)
+                else:
+                    val = self.getByte(val)
+                ret["Reg%d" % regnum] = val
 
         return ret
 
