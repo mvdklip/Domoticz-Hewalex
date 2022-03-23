@@ -59,6 +59,8 @@ class PCWU(BaseDevice):
         128: { 'type': 'te10', 'name': 'T1' },                          # T1 (Ambient temp)
         130: { 'type': 'te10', 'name': 'T2' },                          # T2 (Tank bottom temp)
         132: { 'type': 'te10', 'name': 'T3' },                          # T3 (Tank top temp)
+        134: { 'type': 'te10', 'name': 'T4' },                          # T4 (Solid Fuel Boiler temp)
+        136: { 'type': 'te10', 'name': 'T5' },                          # T5 (Void)
         138: { 'type': 'te10', 'name': 'T6' },                          # T6 (HP water inlet temp)
         140: { 'type': 'te10', 'name': 'T7' },                          # T7 (HP water outlet temp)
         142: { 'type': 'te10', 'name': 'T8' },                          # T8 (HP evaporator temp)
@@ -155,7 +157,9 @@ class PCWU(BaseDevice):
         # Config registers - Unknown - Automatic Boiler D?
         #472                                                            # Unknown, observed value is 650 / 65.0
         #474                                                            # Unknown, observed value is 1 / True
-        #476                                                            # Time Program?
+        #476                                                            # Unknown, observed values match a time program
+        #480                                                            # Unknown, observed values match a time program
+        #484                                                            # Unknown, observed values match a time program
 
         # Config registers - Anti-Legionella
         498: { 'type': 'bool', 'name': 'AntiLegionellaEnabled' },       # Anti-Legionella Enabled (True/False)
