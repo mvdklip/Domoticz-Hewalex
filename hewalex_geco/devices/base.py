@@ -8,8 +8,8 @@ from ..crc import *
 
 class BaseDevice:
     def __init__(self, conHardId, conSoftId, devHardId, devSoftId, onMessage=None):
-        self.conHardId = conHardId  # G-426 controller - physical address
-        self.conSoftId = conSoftId  # G-426 controller - logical address
+        self.conHardId = conHardId  # Geco controller - physical address
+        self.conSoftId = conSoftId  # Geco controller - logical address
         self.devHardId = devHardId  # Hewalex device - physical address
         self.devSoftId = devSoftId  # Hewalex device - logical address
         self.onMessage = onMessage  # Callback - onMessage(obj, h, sh, m)
@@ -248,6 +248,8 @@ class BaseDevice:
             self.processAllMessages(s + m, onMessage=onMessage)
 
     def createReadRegistersMessage(self, start, num):
+        if isinstance(start, str):
+            start = self.getRegisterByName(start)[0]
         header = [0x69, self.devHardId, self.conHardId, 0x84, 0, 0]
         payload = [(self.devSoftId & 0xff), ((self.devSoftId >> 8) & 0xff), (self.conSoftId & 0xff), ((self.conSoftId >> 8) & 0xff), 0x40, 0x80, 0, num & 0xff, start & 0xff, (start >> 8) & 0xff]
         calcCrc16 = crc16(payload)
@@ -258,11 +260,14 @@ class BaseDevice:
         header.append(calcCrc8)
         return bytearray(header + payload)
 
-    def createWriteRegisterMessage(self, reg, val):
-        if isinstance(reg, str):
-            reg = self.getRegisterByName(reg)[0]
+    def createWriteRegistersMessage(self, start, num, values):
+        if isinstance(start, str):
+            start = self.getRegisterByName(start)[0]
         header = [0x69, self.devHardId, self.conHardId, 0x84, 0, 0]
-        payload = [(self.devSoftId & 0xff), ((self.devSoftId >> 8) & 0xff), (self.conSoftId & 0xff), ((self.conSoftId >> 8) & 0xff), 0x60, 0x80, 0, 2, reg & 0xff, (reg >> 8) & 0xff, val & 0xff, (val >> 8) & 0xff]
+        payload = [(self.devSoftId & 0xff), ((self.devSoftId >> 8) & 0xff), (self.conSoftId & 0xff), ((self.conSoftId >> 8) & 0xff), 0x60, 0x80, 0, num & 0xff, start & 0xff, (start >> 8) & 0xff]
+        for val in values:
+            payload.append(val & 0xff)
+            payload.append((val >> 8) & 0xff)
         calcCrc16 = crc16(payload)
         payload.append((calcCrc16 >> 8) & 0xff)
         payload.append(calcCrc16 & 0xff)
@@ -271,9 +276,10 @@ class BaseDevice:
         header.append(calcCrc8)
         return bytearray(header + payload)
 
+    def createWriteRegisterMessage(self, reg, val):
+        return self.createWriteRegistersMessage(reg, 2, [val])
+
     def readRegisters(self, ser, start, num, onMessage=None):
-        if isinstance(start, str):
-            start = self.getRegisterByName(start)[0]
         m = self.createReadRegistersMessage(start, num)
         ser.flushInput()
         ser.timeout = 0.4
@@ -295,6 +301,14 @@ class BaseDevice:
     def readRegister(self, ser, reg, onMessage=None):
         return self.readRegisters(ser, reg, 2, onMessage=onMessage)
 
+    def writeRegisters(self, ser, start, num, values, onMessage=None):
+        m = self.createWriteRegistersMessage(start, num, values)
+        ser.flushInput()
+        ser.timeout = 0.4
+        ser.write(m)
+        r = ser.read(1000)
+        return self.processAllMessages(r, onMessage=onMessage)
+
     def writeRegister(self, ser, reg, val, onMessage=None):
         m = self.createWriteRegisterMessage(reg, val)
         ser.flushInput()
@@ -308,6 +322,15 @@ class BaseDevice:
 #########################################
 
     # Registers are divided in read-only status registers and read/write config registers
+    #
+    # Date and time information seems to be stored in status registers which makes it
+    # impossible to update those through this library. If you're wondering how the
+    # controller (display) connected to a heatpump does this, then remember the
+    # constant communication cycle between display and heatpump. On update of date
+    # and time the display tells the heatpump to _read_ the contents of the associated
+    # registers. The heatpump does this and then _internally_ updates its own date/time
+    # with the values received.
+    #
 
     # The lowest readable register always seems to be 100
     REG_MIN_ADR = 100

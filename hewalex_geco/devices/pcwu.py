@@ -6,8 +6,10 @@ from .base import BaseDevice
 
 class PCWU(BaseDevice):
 
-    # PCWU is driven by PG-426-P01 (controller) and MG-426-P01 (executive module)
-    # Below are the registers for the executive module, so no controller settings
+    # PCWU is driven by Geco PG-426-P01 (controller) and MG-426-P01 (executive module).
+    # Below are the registers for the executive module; the controller follows closely.
+    # Tested with firmware v0.1n and v0.1o (3,0kW), let me know if you use this with
+    # v0.1m (2,5kW).
     REG_MAX_ADR = 536
     REG_MAX_NUM = 226
     REG_CONFIG_START = 302
@@ -24,10 +26,10 @@ class PCWU(BaseDevice):
     # module knows that the controller is off. This situation can be read from register
     # 194 (IsManual), so for a full status multiple registers should be checked.
     #
-    # For some reason writing a 1 to register 304 sometimes disables instead of enables
-    # the heatpump. Since I've started writing value 255 instead this hasn't happened
-    # anymore. I suspect some sort of bitmask when writing to this register but I don't
-    # know the meaning.
+    # For some reason writing a 1 to register 304 sometimes disabled instead of enabled
+    # the heatpump. Writing a value of 255 prevented this for some reason. Please note
+    # that this happened on v0.1n; since then I've exchanged controller and executive
+    # module for v0.1o ones; now it doesn't seem to happen anymore.
     #
     # From the normal communication cycle between controller and executive module some
     # special registers can be identified. These are not available through this library,
@@ -63,10 +65,10 @@ class PCWU(BaseDevice):
         144: { 'type': 'te10', 'name': 'T9' },                          # T9 (HP before compressor temp)
         146: { 'type': 'te10', 'name': 'T10' },                         # T10 (HP after compressor temp)
 
-        166: { 'type': 'word', 'name': 'unknown5' },                    # Unknown, seems fixed to a '1' value for krzysztof1111111111, '3' for me
-        192: { 'type': 'word', 'name': 'unknown3' },                    # Unknown, seems fixed to a '49663' or '50175' value, which is a difference of 512 so probably a bitmask
+        166: { 'type': 'word', 'name': 'unknown5' },                    # Unknown, observed values are 1 (krzysztof1111111111) and 3 (mvdklip)
+        192: { 'type': 'word', 'name': 'unknown3' },                    # Unknown, observed values are 49659, 49663 and 50175; probably a bitmask
         194: { 'type': 'word', 'name': 'IsManual' },                    # Unknown, 2 when controller on, 1 when controller off
-        196: { 'type': 'mask', 'name': [
+        196: { 'type': 'mask', 'name': [                                # TODO - Add flags for Heater P, Boiler Pump, ...
             'FanON',                                                    # Fan ON (True/False)
             None,
             'CirculationPumpON',                                        # Circulation pump ON (True/False)
@@ -84,12 +86,12 @@ class PCWU(BaseDevice):
         198: { 'type': 'word', 'name': 'EV1' },                         # Expansion Valve 1? - Otwarcie zaworu rozprężnego - Opening of the expansion valve
         202: { 'type': 'word', 'name': 'WaitingStatus' },               # 0 when available for operation, 2 when disabled through register 304, 4 when low COP, 32 when just stopped and waiting to be restarted
         206: { 'type': 'word', 'name': 'WaitingTimer' },                # Timer counting down to 0 when just stopped and waiting to be available for operation again
-        210: { 'type': 'word', 'name': 'unknown7' },                    # Unknown, seems fixed to a '0' value and is possibly related to alarms
-        218: { 'type': 'word', 'name': 'unknown8' },                    # Unknown, seems fixed to a '0' value for the executive module
-        220: { 'type': 'word', 'name': 'unknown9' },                    # Unknown, seems fixed to a '0' value for the executive module
-        222: { 'type': 'word', 'name': 'unknown10' },                   # Unknown, seems fixed to a '0' value for the executive module
+        210: { 'type': 'word', 'name': 'unknown7' },                    # Unknown, observed value is 0 and is possibly related to alarms
+        218: { 'type': 'word', 'name': 'unknown8' },                    # Unknown, observed value is 0
+        220: { 'type': 'word', 'name': 'unknown9' },                    # Unknown, observed value is 0
+        222: { 'type': 'word', 'name': 'unknown10' },                   # Unknown, observed value is 0
 
-        # Config registers
+        # Config registers - Heat Pump
         302: { 'type': 'word', 'name': 'InstallationScheme' },          # Installation Scheme (1-9)
         304: { 'type': 'bool', 'name': 'HeatPumpEnabled' },             # Heat Pump Enabled (True/False)
         306: { 'type': 'word', 'name': 'TapWaterSensor' },              # Tap Water Sensor (0=T2, 1=T3, 2=T7)
@@ -99,7 +101,6 @@ class PCWU(BaseDevice):
         314: { 'type': 'tprg', 'name': 'TimeProgramHPM-F' },            # Time Program HP M-F (True/False per hour of the day)
         318: { 'type': 'tprg', 'name': 'TimeProgramHPSat' },            # Time Program HP Sat (True/False per hour of the day)
         322: { 'type': 'tprg', 'name': 'TimeProgramHPSun' },            # Time Program HP Sun (True/False per hour of the day)
-
         326: { 'type': 'bool', 'name': 'AntiFreezingEnabled' },         # Anti Freezing Enabled (True/False)
         328: { 'type': 'word', 'name': 'WaterPumpOperationMode' },      # Water Pump Operation Mode (0=Continuous, 1=Synchronous)
         330: { 'type': 'word', 'name': 'FanOperationMode' },            # Fan Operation Mode (0=Max, 1=Min, 2=Day/Night)
@@ -107,25 +108,88 @@ class PCWU(BaseDevice):
         334: { 'type': 'te10', 'name': 'DefrostingStartTemp' },         # Defrosting Start Temp
         336: { 'type': 'te10', 'name': 'DefrostingStopTemp' },          # Defrosting Stop Temp
         338: { 'type': 'word', 'name': 'DefrostingMaxTime' },           # Defrosting Max Time (min)
+        #340                                                            # Unknown, observed value is 20
+        #342                                                            # Unknown, observed value is 5
 
-        #374                                                            # Time Program?
-        #406                                                            # Time Program?
-        #432                                                            # Time Program?
+        # Config registers - Expansion Valve
+        344: { 'type': 'word', 'name': 'EVOperationMode' },             # Expansion Valve Operation Mode (0=Auto, 1=Manual)
+        346: { 'type': 'word', 'name': 'EVManualStep' },                # Expansion Valve Manual Step (300)
+        348: { 'type': 'te10', 'name': 'EVSuperheatTemp' },             # Expansion Valve Superheat Temp (1)
+        350: { 'type': 'word', 'name': 'EVInitialStep' },               # Expansion Valve Initial Step (200)
+        352: { 'type': 'word', 'name': 'EVMinStep' },                   # Expansion Valve Min Step (120)
+        354: { 'type': 'word', 'name': 'EVDefrostingStep' },            # Expansion Valve Defrosting Step (480)
+
+        # Config registers - Heater E
+        364: { 'type': 'bool', 'name': 'HeaterEEnabled' },              # Heater E Enabled (True/False)
+        366: { 'type': 'te10', 'name': 'HeaterEHPONTemp' },             # Heater E water temp when HP ON (45.0)
+        368: { 'type': 'te10', 'name': 'HeaterEHPOFFTemp' },            # Heater E water temp when HP OFF (55.0)
+        370: { 'type': 'bool', 'name': 'HeaterEBlocked' },              # Heater E blocked when HP on? (True/False)
+        #372                                                            # Unknown, observed value is 1 / True
+        374: { 'type': 'tprg', 'name': 'HeaterETimeProgramM-F' },       # Heater E Time Program M-F (True/False per hour of the day)
+        378: { 'type': 'tprg', 'name': 'HeaterETimeProgramSat' },       # Heater E Time Program Sat (True/False per hour of the day)
+        382: { 'type': 'tprg', 'name': 'HeaterETimeProgramSun' },       # Heater E Time Program Sun (True/False per hour of the day)
+
+        # Config registers - Heater P
+        396: { 'type': 'bool', 'name': 'HeaterPEnabled' },              # Heater P Enabled (True/False)
+        398: { 'type': 'te10', 'name': 'HeaterPHPONTemp' },             # Heater P water temp when HP ON (45.0)
+        400: { 'type': 'te10', 'name': 'HeaterPHPOFFTemp' },            # Heater P water temp when HP OFF (55.0)
+        402: { 'type': 'bool', 'name': 'HeaterPBlocked' },              # Heater P blocked when HP on? (True/False)
+        #404                                                            # Unknown, observed value is 1 / True
+        406: { 'type': 'tprg', 'name': 'HeaterPTimeProgramM-F' },       # Heater P Time Program M-F (True/False per hour of the day)
+        410: { 'type': 'tprg', 'name': 'HeaterPTimeProgramSat' },       # Heater P Time Program Sat (True/False per hour of the day)
+        414: { 'type': 'tprg', 'name': 'HeaterPTimeProgramSun' },       # Heater P Time Program Sun (True/False per hour of the day)
+
+        # Config registers - Circulation Pump C
+        428: { 'type': 'te10', 'name': 'CirculationPumpMinTemp' },      # Circulation Pump Min Temp
+        430: { 'type': 'word', 'name': 'CirculationPumpOperationMode' },# Circulation Pump Operation Mode (0=Continuous, 1=Interrupted)
+        432: { 'type': 'tprg', 'name': 'CirculationPumpTimeProgramM-F' },# Circulation Pump Time Program M-F (True/False per hour of the day)
+        436: { 'type': 'tprg', 'name': 'CirculationPumpTimeProgramSat' },# Circulation Pump Time Program Sat (True/False per hour of the day)
+        440: { 'type': 'tprg', 'name': 'CirculationPumpTimeProgramSun' },# Circulation Pump Time Program Sun (True/False per hour of the day)
+
+        # Config registers - Boiler Pump F - Solid Fuel Boiler B
+        454: { 'type': 'te10', 'name': 'BoilerPumpMaxTemp' },           # Boiler Pump Max Temp (65.0)
+        456: { 'type': 'te10', 'name': 'BoilerPumpMinTemp' },           # Boiler Pump Min Temp (45.0)
+        458: { 'type': 'te10', 'name': 'BoilerPumpHysteresis' },        # Boiler Pump Hysteresis (8.0)
+        460: { 'type': 'bool', 'name': 'BoilerPumpPriority' },          # Boiler Pump Priority (True/False)
+
+        # Config registers - Unknown - Automatic Boiler D?
+        #472                                                            # Unknown, observed value is 650 / 65.0
+        #474                                                            # Unknown, observed value is 1 / True
         #476                                                            # Time Program?
 
-        516: { 'type': 'bool', 'name': 'ExtControllerHPOFF' },          # Ext Controller HP OFF (True/False)
-        #518                                                            # Ext Controller E OFF?
-        #520                                                            # Ext Controller P OFF?
-        #522                                                            # Ext Controller .. OFF?
-        #524                                                            # Ext Controller .. OFF?
+        # Config registers - Anti-Legionella
+        498: { 'type': 'bool', 'name': 'AntiLegionellaEnabled' },       # Anti-Legionella Enabled (True/False)
+        500: { 'type': 'bool', 'name': 'AntiLegionellaUseHeaterE' },    # Anti-Legionella Use Heater E (True/False)
+        502: { 'type': 'bool', 'name': 'AntiLegionellaUseHeaterP' },    # Anti-Legionella Use Heater P (True/False)
+        #504                                                            # Unknown, observed value is 1 / True
 
+        # Config registers - Ext Controller
+        516: { 'type': 'bool', 'name': 'ExtControllerHPOFF' },          # Ext Controller HP OFF (True/False)
+        518: { 'type': 'bool', 'name': 'ExtControllerHeaterEOFF' },     # Ext Controller Heater E OFF (True/False)
+        #520                                                            # Unknown, observed value is 1 / True
+        522: { 'type': 'bool', 'name': 'ExtControllerPumpFOFF' },       # Ext Controller Pump F OFF (True/False)
+        524: { 'type': 'bool', 'name': 'ExtControllerHeaterPOFF' },     # Ext Controller Heater P OFF (True/False)
+
+        # Config registers - Unknown
+        #534                                                            # Unknown, observed value is 2
+        #536                                                            # Unknown, observed value is 2
     }
 
     def disable(self, ser):
         return self.writeRegister(ser, 'HeatPumpEnabled', 0)
 
     def enable(self, ser):
-        return self.writeRegister(ser, 'HeatPumpEnabled', 255)          # Used to write a 1 to this register but this sometimes disabled (?!) the heatpump instead of enabling it
+        #return self.writeRegister(ser, 'HeatPumpEnabled', 255)          # Used to write a 1 to this register but this sometimes disabled (?!) the heatpump instead of enabling it
+        return self.writeRegister(ser, 'HeatPumpEnabled', 1)
 
-    def setTapWaterTemp(self, ser, temp):                               # Setting the tap water temp doesn't always function properly; disables the heatpump sometimes?!
-        return self.writeRegister(ser, 'TapWaterTemp', int(temp * 10))
+    def _setTemp(self, ser, regName, temp):
+        return self.writeRegister(ser, regName, int(temp * 10))
+
+    def setTapWaterTemp(self, ser, temp):
+        return self._setTemp(ser, 'TapWaterTemp', temp)
+
+    def setTapWaterHysteresis(self, ser, temp):
+        return self._setTemp(ser, 'TapWaterHysteresis', temp)
+
+    def setAmbientMinTemp(self, ser, temp):
+        return self._setTemp(ser, 'AmbientMinTemp', temp)
