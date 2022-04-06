@@ -8,7 +8,7 @@
 # https://github.com/aelias-eu/hewalex-geco-protocol
 
 """
-<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.5.6">
+<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.5.7">
     <description>
         <h2>Hewalex Plugin</h2><br/>
         <h3>Features</h3>
@@ -98,6 +98,20 @@ class BasePlugin:
                 Domoticz.Device(Name="Switch", Unit=4, TypeName='Switch', Image=9).Create()
             if len(Devices) < 5:
                 Domoticz.Device(Name="Tap Water Temp", Unit=5, Type=242, Subtype=1).Create()
+            if len(Devices) < 6:
+                Domoticz.Device(Name="T4 (solid fuel boiler)", Unit=6, TypeName='Temperature').Create()
+            if len(Devices) < 7:
+                Domoticz.Device(Name="T5 (void)", Unit=7, TypeName='Temperature').Create()
+            if len(Devices) < 8:
+                Domoticz.Device(Name="T6 (water inlet)", Unit=8, TypeName='Temperature').Create()
+            if len(Devices) < 9:
+                Domoticz.Device(Name="T7 (water outlet)", Unit=9, TypeName='Temperature').Create()
+            if len(Devices) < 10:
+                Domoticz.Device(Name="T8 (evaporator)", Unit=10, TypeName='Temperature').Create()
+            if len(Devices) < 11:
+                Domoticz.Device(Name="T9 (before compressor)", Unit=11, TypeName='Temperature').Create()
+            if len(Devices) < 12:
+                Domoticz.Device(Name="T10 (after compressor)", Unit=12, TypeName='Temperature').Create()
         elif (self.devMode == 3):
             if len(Devices) < 1:
                 Domoticz.Device(Name="T1 (collectors)", Unit=1, TypeName='Temperature').Create()
@@ -133,6 +147,20 @@ class BasePlugin:
                 Devices[2].Update(nValue=0, sValue=str(mp['T2']))
             if 'T3' in mp:
                 Devices[3].Update(nValue=0, sValue=str(mp['T3']))
+            if 'T4' in mp:
+                Devices[6].Update(nValue=0, sValue=str(mp['T4']))
+            if 'T5' in mp:
+                Devices[7].Update(nValue=0, sValue=str(mp['T5']))
+            if 'T6' in mp:
+                Devices[8].Update(nValue=0, sValue=str(mp['T6']))
+            if 'T7' in mp:
+                Devices[9].Update(nValue=0, sValue=str(mp['T7']))
+            if 'T8' in mp:
+                Devices[10].Update(nValue=0, sValue=str(mp['T8']))
+            if 'T9' in mp:
+                Devices[11].Update(nValue=0, sValue=str(mp['T9']))
+            if 'T10' in mp:
+                Devices[12].Update(nValue=0, sValue=str(mp['T10']))
             if 'TapWaterTemp' in mp:
                 Devices[5].Update(nValue=0, sValue=str(mp['TapWaterTemp']))
             if self.devMode == 1:
