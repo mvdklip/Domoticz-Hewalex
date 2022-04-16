@@ -350,15 +350,15 @@ class BaseDevice:
     registers = {
 #
 #        # Status registers
-#        120: { 'type': 'date', 'name': 'date' },                        # Date
-#        124: { 'type': 'time', 'name': 'time' },                        # Time
-#        128: { 'type': 'te10', 'name': 'T1' },                          # T1
-#        130: { 'type': 'te10', 'name': 'T2' },                          # T2
-#        132: { 'type': 'te10', 'name': 'T3' },                          # T3
+#        120: { 'type': 'date', 'name': 'date',                          'desc': 'Date' },
+#        124: { 'type': 'time', 'name': 'time',                          'desc': 'Time' },
+#        128: { 'type': 'te10', 'name': 'T1',                            'desc': 'T1 (Water temp)' },
+#        130: { 'type': 'te10', 'name': 'T2',                            'desc': 'T2 (Collectors temp)' },
+#        132: { 'type': 'te10', 'name': 'T3',                            'desc': 'T3 (Ambient temp)' },
 #        ...
 #
 #        # Config registers
-#        XXX: { 'type': 'word', 'name': 'InstallationScheme' },          # Installation Scheme
+#        300: { 'type': 'word', 'name': 'InstallationScheme',            'desc': 'Installation Scheme (1-10)' },
 #        ...
 #
     }
