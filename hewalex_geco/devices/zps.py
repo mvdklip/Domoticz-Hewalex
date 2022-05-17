@@ -57,9 +57,9 @@ class ZPS(BaseDevice):
         208: { 'type': 'temp', 'name': 'CollectorPumpHysteresis',       'desc': 'Collector Pump Hysteresis (Difference between T1 and T2 to turn on collector pump)' },
         210: { 'type': 'temp', 'name': 'ExtraPumpHysteresis',           'desc': 'Extra Pump Hysteresis (Temp difference to turn on extra pump)' },
         212: { 'type': 'temp', 'name': 'CollectorPumpMaxTemp',          'desc': 'Collector Pump Max Temp (Maximum T2 temp to turn off collector pump)' },
-        214: { 'type': 'word', 'name': 'BoilerPumpMinTemp',             'desc': 'Boiler Pump Min Temp (Minimum T5 temp to turn on boiler pump)' },
-        218: { 'type': 'word', 'name': 'HeatSourceMaxTemp',             'desc': 'Heat Source Max Temp (Maximum T4 temp to turn off heat sources)' },
-        220: { 'type': 'word', 'name': 'BoilerPumpMaxTemp',             'desc': 'Boiler Pump Max Temp (Maximum T4 temp to turn off boiler pump)' },
+        214: { 'type': 'temp', 'name': 'BoilerPumpMinTemp',             'desc': 'Boiler Pump Min Temp (Minimum T5 temp to turn on boiler pump)' },
+        218: { 'type': 'temp', 'name': 'HeatSourceMaxTemp',             'desc': 'Heat Source Max Temp (Maximum T4 temp to turn off heat sources)' },
+        220: { 'type': 'temp', 'name': 'BoilerPumpMaxTemp',             'desc': 'Boiler Pump Max Temp (Maximum T4 temp to turn off boiler pump)' },
         222: { 'type': 'bool', 'name': 'PumpRegulationEnabled',         'desc': 'Pump Regulation Enabled (True/False)' },
         226: { 'type': 'word', 'name': 'HeatSourceMaxCollectorPower',   'desc': 'Heat Source Max Collector Power (Maximum collector power to turn off heat sources) (100-9900W)' },
         228: { 'type': 'bool', 'name': 'CollectorOverheatProtEnabled',  'desc': 'Collector Overheat Protection Enabled (True/False)' },
@@ -102,8 +102,5 @@ class ZPS(BaseDevice):
     def enableNightCooling(self, ser):
         return self.writeRegister(ser, 'NightCoolingEnabled', 1)
 
-    def setNightCoolingStartTemp(self, ser, temp):
-        return self._setTemp(ser, 'NightCoolingStartTemp', temp, 1)
-
-    def setNightCoolingStopTemp(self, ser, temp):
-        return self._setTemp(ser, 'NightCoolingStopTemp', temp, 1)
+    def setTemp(self, ser, regName, temp):
+        return self._setTemp(ser, regName, temp, 1)

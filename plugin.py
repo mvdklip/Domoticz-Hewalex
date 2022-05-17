@@ -8,7 +8,7 @@
 # https://github.com/aelias-eu/hewalex-geco-protocol
 
 """
-<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.5.8">
+<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.5.9">
     <description>
         <h2>Hewalex Plugin</h2><br/>
         <h3>Features</h3>
@@ -136,6 +136,10 @@ class BasePlugin:
                 Domoticz.Device(Name="Night Cooling Start Temp", Unit=9, Type=242, Subtype=1).Create()
             if len(Devices) < 10:
                 Domoticz.Device(Name="Night Cooling Stop Temp", Unit=10, Type=242, Subtype=1).Create()
+            if len(Devices) < 11:
+                Domoticz.Device(Name="Collector Pump Max Temp", Unit=11, Type=242, Subtype=1).Create()
+            if len(Devices) < 12:
+                Domoticz.Device(Name="Collector Overheat Protection Max Temp", Unit=12, Type=242, Subtype=1).Create()
 
         DumpConfigToLog()
 
@@ -216,6 +220,10 @@ class BasePlugin:
                 Devices[9].Update(nValue=0, sValue=str(mp['NightCoolingStartTemp']))
             if 'NightCoolingStopTemp' in mp:
                 Devices[10].Update(nValue=0, sValue=str(mp['NightCoolingStopTemp']))
+            if 'CollectorPumpMaxTemp' in mp:
+                Devices[11].Update(nValue=0, sValue=str(mp['CollectorPumpMaxTemp']))
+            if 'CollectorOverheatProtMaxTemp' in mp:
+                Devices[12].Update(nValue=0, sValue=str(mp['CollectorOverheatProtMaxTemp']))
             if self.devMode == 3:
                 self.devReady = True
 
@@ -245,10 +253,16 @@ class BasePlugin:
                     SendCommand(self, 'disableNightCooling')
                     Devices[Unit].Update(nValue=0, sValue="")
                 elif (Unit == 9) and (Command == "Set Level"):
-                    SendCommand(self, 'setNightCoolingStartTemp', Level)
+                    SendCommand(self, 'setTemp', 'NightCoolingStartTemp', Level)
                     Devices[Unit].Update(nValue=0, sValue=str(Level))
                 elif (Unit == 10) and (Command == "Set Level"):
-                    SendCommand(self, 'setNightCoolingStopTemp', Level)
+                    SendCommand(self, 'setTemp', 'NightCoolingStopTemp', Level)
+                    Devices[Unit].Update(nValue=0, sValue=str(Level))
+                elif (Unit == 11) and (Command == "Set Level"):
+                    SendCommand(self, 'setTemp', 'CollectorPumpMaxTemp', Level)
+                    Devices[Unit].Update(nValue=0, sValue=str(Level))
+                elif (Unit == 12) and (Command == "Set Level"):
+                    SendCommand(self, 'setTemp', 'CollectorOverheatProtMaxTemp', Level)
                     Devices[Unit].Update(nValue=0, sValue=str(Level))
 
             return True     # TODO - check if command actually succeeded

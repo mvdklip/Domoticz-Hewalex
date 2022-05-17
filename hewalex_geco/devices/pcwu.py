@@ -187,11 +187,14 @@ class PCWU(BaseDevice):
         #return self.writeRegister(ser, 'HeatPumpEnabled', 255)          # Workaround from the past where writing a 1 sometimes yielded weird results - probably caused by a bad controller board
         return self.writeRegister(ser, 'HeatPumpEnabled', 1)
 
+    def setTemp(self, ser, regName, temp):
+        return self._setTemp(ser, regName, temp, 10)
+
     def setTapWaterTemp(self, ser, temp):
-        return self._setTemp(ser, 'TapWaterTemp', temp, 10)
+        return self.setTemp(ser, 'TapWaterTemp', temp)
 
     def setTapWaterHysteresis(self, ser, temp):
-        return self._setTemp(ser, 'TapWaterHysteresis', temp, 10)
+        return self.setTemp(ser, 'TapWaterHysteresis', temp)
 
     def setAmbientMinTemp(self, ser, temp):
-        return self._setTemp(ser, 'AmbientMinTemp', temp, 10)
+        return self.setTemp(ser, 'AmbientMinTemp', temp)
