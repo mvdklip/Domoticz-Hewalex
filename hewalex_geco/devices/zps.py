@@ -69,8 +69,8 @@ class ZPS(BaseDevice):
         236: { 'type': 'bool', 'name': 'LegionellaProtEnabled',         'desc': 'Legionella Protection Enabled (True/False)' },
         238: { 'type': 'bool', 'name': 'LockBoilerKWithBoilerC',        'desc': 'Lock Boiler K With Boiler C (True/False)' },
         240: { 'type': 'bool', 'name': 'NightCoolingEnabled',           'desc': 'Night Cooling Enabled (True/False)' },
-        242: { 'type': 'temp', 'name': 'NightCoolingStartTemp',         'desc': 'Night Cooling Start Temp' },
-        244: { 'type': 'temp', 'name': 'NightCoolingStopTemp',          'desc': 'Night Cooling Stop Temp' },
+        242: { 'type': 'temp', 'name': 'NightCoolingStartTemp',         'desc': 'Night Cooling Start Temp (45-80)' },
+        244: { 'type': 'temp', 'name': 'NightCoolingStopTemp',          'desc': 'Night Cooling Stop Temp (20-40)' },
         246: { 'type': 'word', 'name': 'NightCoolingStopTime',          'desc': 'Night Cooling Stop Time (hr)' },
         248: { 'type': 'tprg', 'name': 'TimeProgramCM-F',               'desc': 'Time Program C M-F (True/False per hour of the day)' },
         252: { 'type': 'tprg', 'name': 'TimeProgramCSat',               'desc': 'Time Program C Sat (True/False per hour of the day)' },
@@ -101,3 +101,9 @@ class ZPS(BaseDevice):
 
     def enableNightCooling(self, ser):
         return self.writeRegister(ser, 'NightCoolingEnabled', 1)
+
+    def setNightCoolingStartTemp(self, ser, temp):
+        return self._setTemp(ser, 'NightCoolingStartTemp', temp, 1)
+
+    def setNightCoolingStopTemp(self, ser, temp):
+        return self._setTemp(ser, 'NightCoolingStopTemp', temp, 1)

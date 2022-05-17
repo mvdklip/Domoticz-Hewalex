@@ -318,6 +318,13 @@ class BaseDevice:
         return self.processAllMessages(r, onMessage=onMessage)
 
 
+# Interface private helper functions
+####################################
+
+    def _setTemp(self, ser, regName, temp, base):
+        return self.writeRegister(ser, regName, int(temp * base))
+
+
 # Interface to implement in child classes
 #########################################
 

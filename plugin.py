@@ -8,7 +8,7 @@
 # https://github.com/aelias-eu/hewalex-geco-protocol
 
 """
-<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.5.7">
+<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.5.8">
     <description>
         <h2>Hewalex Plugin</h2><br/>
         <h3>Features</h3>
@@ -87,6 +87,7 @@ class BasePlugin:
         self.devMode = int(Parameters["Mode2"])
         Domoticz.Debug("Device & Mode is set to %d" % self.devMode)
 
+        # PCWU devices
         if (self.devMode == 1) or (self.devMode == 2):
             if len(Devices) < 1:
                 Domoticz.Device(Name="T1 (ambient)", Unit=1, TypeName='Temperature').Create()
@@ -112,6 +113,8 @@ class BasePlugin:
                 Domoticz.Device(Name="T9 (before compressor)", Unit=11, TypeName='Temperature').Create()
             if len(Devices) < 12:
                 Domoticz.Device(Name="T10 (after compressor)", Unit=12, TypeName='Temperature').Create()
+
+        # ZPS devices
         elif (self.devMode == 3):
             if len(Devices) < 1:
                 Domoticz.Device(Name="T1 (collectors)", Unit=1, TypeName='Temperature').Create()
@@ -129,6 +132,10 @@ class BasePlugin:
                 Domoticz.Device(Name="SWH Consumption", Unit=7, TypeName='kWh', Options={'EnergyMeterMode':'1'}).Create()
             if len(Devices) < 8:
                 Domoticz.Device(Name="Night Cooling Enabled", Unit=8, TypeName='Switch', Image=9).Create()
+            if len(Devices) < 9:
+                Domoticz.Device(Name="Night Cooling Start Temp", Unit=9, Type=242, Subtype=1).Create()
+            if len(Devices) < 10:
+                Domoticz.Device(Name="Night Cooling Stop Temp", Unit=10, Type=242, Subtype=1).Create()
 
         DumpConfigToLog()
 
@@ -205,6 +212,10 @@ class BasePlugin:
                 newValue = int(mp['NightCoolingEnabled'])
                 if newValue != Devices[8].nValue:
                     Devices[8].Update(nValue=newValue, sValue="")
+            if 'NightCoolingStartTemp' in mp:
+                Devices[9].Update(nValue=0, sValue=str(mp['NightCoolingStartTemp']))
+            if 'NightCoolingStopTemp' in mp:
+                Devices[10].Update(nValue=0, sValue=str(mp['NightCoolingStopTemp']))
             if self.devMode == 3:
                 self.devReady = True
 
@@ -233,6 +244,12 @@ class BasePlugin:
                 elif (Unit == 8) and (Command == "Off"):
                     SendCommand(self, 'disableNightCooling')
                     Devices[Unit].Update(nValue=0, sValue="")
+                elif (Unit == 9) and (Command == "Set Level"):
+                    SendCommand(self, 'setNightCoolingStartTemp', Level)
+                    Devices[Unit].Update(nValue=0, sValue=str(Level))
+                elif (Unit == 10) and (Command == "Set Level"):
+                    SendCommand(self, 'setNightCoolingStopTemp', Level)
+                    Devices[Unit].Update(nValue=0, sValue=str(Level))
 
             return True     # TODO - check if command actually succeeded
 
