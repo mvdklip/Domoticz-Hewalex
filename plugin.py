@@ -8,7 +8,7 @@
 # https://github.com/aelias-eu/hewalex-geco-protocol
 
 """
-<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.5.9">
+<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.6.0">
     <description>
         <h2>Hewalex Plugin</h2><br/>
         <h3>Features</h3>
@@ -38,6 +38,7 @@
                 <option label="60 min" value="720"/>
             </options>
         </param>
+        <param field="Mode4" label="Controller and device Ids" width="75px" required="true" default="1,1;2,2"/>
         <param field="Mode6" label="Debug" width="75px">
             <options>
                 <option label="True" value="Debug"/>
@@ -60,16 +61,14 @@ class BasePlugin:
     lastPolled = 0
     baseUrl = None
     maxAttempts = 3
+
+    conHardId = 1
+    conSoftId = 1       # Controller hard and soft Ids
+    devHardId = 2
+    devSoftId = 2       # Device hard and soft Ids
+
     devMode = None      # Operating mode of device (1 = PCWU - Eavesdropping, 2 = PCWU - Direct comms, 3 = ZPS - Direct comms)
     devReady = False    # Is device ready to accept commands?
-
-    # Controller (Master)
-    conHardId = 1
-    conSoftId = 1
-
-    # Device (Slave)
-    devHardId = 2
-    devSoftId = 2
 
     def __init__(self):
         return
@@ -86,6 +85,19 @@ class BasePlugin:
 
         self.devMode = int(Parameters["Mode2"])
         Domoticz.Debug("Device & Mode is set to %d" % self.devMode)
+
+        allIds = Parameters["Mode4"].split(";")
+        if len(allIds) == 2:
+            conIds = allIds[0].split(',')
+            if len(conIds) == 2:
+                self.conHardId = int(conIds[0])
+                self.conSoftId = int(conIds[1])
+                Domoticz.Debug("Controller Ids set to %d, %d" % (self.conHardId, self.conSoftId))
+            devIds = allIds[1].split(',')
+            if len(devIds) == 2:
+                self.devHardId = int(devIds[0])
+                self.devSoftId = int(devIds[1])
+                Domoticz.Debug("Device Ids set to %d, %d" % (self.devHardId, self.devSoftId))
 
         # PCWU devices
         if (self.devMode == 1) or (self.devMode == 2):
@@ -289,10 +301,7 @@ class BasePlugin:
                 try:
                     if (self.devMode == 1):
                         SendCommand(self, 'eavesDrop')
-                    elif (self.devMode == 2):
-                        SendCommand(self, 'readStatusRegisters')
-                        SendCommand(self, 'readConfigRegisters')
-                    elif (self.devMode == 3):
+                    else:
                         SendCommand(self, 'readStatusRegisters')
                         SendCommand(self, 'readConfigRegisters')
                 except Exception as e:
