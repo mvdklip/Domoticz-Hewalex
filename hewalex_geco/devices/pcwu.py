@@ -126,7 +126,7 @@ class PCWU(BaseDevice):
         364: { 'type': 'bool', 'name': 'HeaterEEnabled',                'desc': 'Heater E Enabled (True/False)' },
         366: { 'type': 'te10', 'name': 'HeaterEHPONTemp',               'desc': 'Heater E water temp when HP ON (45.0)' },
         368: { 'type': 'te10', 'name': 'HeaterEHPOFFTemp',              'desc': 'Heater E water temp when HP OFF (55.0)' },
-        370: { 'type': 'bool', 'name': 'HeaterEBlocked',                'desc': 'Heater E blocked when HP on? (True/False)' },
+        370: { 'type': 'bool', 'name': 'HeaterEBlocked',                'desc': 'Heater E blocked when HP ON? (True/False)' },
         #372                                                            # Unknown, observed value is 1 / True
         374: { 'type': 'tprg', 'name': 'HeaterETimeProgramM-F',         'desc': 'Heater E Time Program M-F (True/False per hour of the day)' },
         378: { 'type': 'tprg', 'name': 'HeaterETimeProgramSat',         'desc': 'Heater E Time Program Sat (True/False per hour of the day)' },
@@ -136,7 +136,7 @@ class PCWU(BaseDevice):
         396: { 'type': 'bool', 'name': 'HeaterPEnabled',                'desc': 'Heater P Enabled (True/False)' },
         398: { 'type': 'te10', 'name': 'HeaterPHPONTemp',               'desc': 'Heater P water temp when HP ON (45.0)' },
         400: { 'type': 'te10', 'name': 'HeaterPHPOFFTemp',              'desc': 'Heater P water temp when HP OFF (55.0)' },
-        402: { 'type': 'bool', 'name': 'HeaterPBlocked',                'desc': 'Heater P blocked when HP on? (True/False)' },
+        402: { 'type': 'bool', 'name': 'HeaterPBlocked',                'desc': 'Heater P blocked when HP ON? (True/False)' },
         #404                                                            # Unknown, observed value is 1 / True
         406: { 'type': 'tprg', 'name': 'HeaterPTimeProgramM-F',         'desc': 'Heater P Time Program M-F (True/False per hour of the day)' },
         410: { 'type': 'tprg', 'name': 'HeaterPTimeProgramSat',         'desc': 'Heater P Time Program Sat (True/False per hour of the day)' },

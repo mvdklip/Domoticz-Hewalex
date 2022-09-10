@@ -29,7 +29,19 @@ Make sure to (temporarily) enable 'Accept new Hardware Devices' in System Settin
 
 Afterwards navigate to the Devices page and enable the newly created devices.
 
+## Expert mode
+
+Please enable expert mode only if you:
+A) Are absolutely sure that you know all ins and outs of your Hewalex device.
+B) Identified some 'X' device in the sourcecode of the plugin you cannot live without.
+
+You are SOLELY responsible for the consequences of enabling expert mode and interacting with the 'X' devices created. Curiosity killed the cat!
+
+Also note the known issue below - there is no easy way to delete 'X' devices afterwards. You'll have to delete them manually one by one.
+
 ## Known issues
+
+Disabling expert mode will not delete previously created 'X' devices.
 
 ## Updating
 
@@ -46,8 +58,10 @@ sudo /etc/init.d/domoticz.sh restart
 | **IP address** | IP of the RS485 to Wi-Fi device eg. 192.168.1.231 |
 | **Port** | Port of the RS485 to Wi-Fi device eg. 8899 |
 | **Device & Mode** | Device type and mode of communication |
-| **Query interval** | how often is data retrieved |
-| **Debug** | show debug logging |
+| **Query interval** | How often is data retrieved |
+| **Controller and device Ids** | Controller and device hard and soft ids eg. 1,1;2,2 |
+| **Expert mode** | Enable expert mode - RTFM before enabling! |
+| **Debug log** | Show debug logging |
 
 ## Acknowledgements
 
