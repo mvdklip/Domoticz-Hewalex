@@ -8,7 +8,7 @@
 # https://github.com/aelias-eu/hewalex-geco-protocol
 
 """
-<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.7.0">
+<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.7.1">
     <description>
         <h2>Hewalex Plugin</h2><br/>
         <h3>Features</h3>
@@ -57,6 +57,7 @@
 
 
 import serial
+import time
 import Domoticz
 
 from hewalex_geco.devices import PCWU, ZPS
@@ -80,14 +81,23 @@ class BasePlugin:
 
     temp_devices = {}
     switch_devices = {}
+    custom_devices = {}
     x_switch_devices = {}
+
+    custom_data = {}
 
     def __init__(self):
         return
 
     def onStart(self):
         Domoticz.Debug("onStart called")
-        self.expertMode = (Parameters["Mode5"] == "Enabled")
+
+        self.devMode = int(Parameters["Mode2"])
+        Domoticz.Debug("Device & Mode is set to %d" % self.devMode)
+
+        self.expertMode = (self.devMode > 1 and Parameters["Mode5"] == "Enabled")
+        if self.expertMode:
+            Domoticz.Debug("Expert mode and devices enabled")
 
         if Parameters["Mode6"] == "Debug":
             Domoticz.Debugging(1)
@@ -96,9 +106,6 @@ class BasePlugin:
 
         self.baseUrl = "socket://%s:%s" % (Parameters["Address"], Parameters["Port"])
         Domoticz.Debug("Base URL is set to %s" % self.baseUrl)
-
-        self.devMode = int(Parameters["Mode2"])
-        Domoticz.Debug("Device & Mode is set to %d" % self.devMode)
 
         allIds = Parameters["Mode4"].split(";")
         if len(allIds) == 2:
@@ -114,7 +121,7 @@ class BasePlugin:
                 Domoticz.Debug("Device Ids set to %d, %d" % (self.devHardId, self.devSoftId))
 
         # PCWU devices
-        if (self.devMode == 1) or (self.devMode == 2):
+        if self.devMode == 1 or self.devMode == 2:
             SetupDevicesPCWU(self)
             if self.expertMode:
                 SetupExpertDevicesPCWU(self)
@@ -136,6 +143,8 @@ class BasePlugin:
         Domoticz.Debug("onMessagePCWU called")
         if (self.devMode == 1 and sh["FNC"] == 0x60) or (self.devMode == 2 and sh["FNC"] == 0x50):
             mp = dev.parseRegisters(sh["RestMessage"], sh["RegStart"], sh["RegLen"])
+
+            # Temp and switch devices
             for k,v in self.temp_devices.items():
                 if k in mp:
                     Devices[v].Update(nValue=0, sValue=str(mp[k]))
@@ -144,12 +153,34 @@ class BasePlugin:
                     newValue = int(mp[k])
                     if newValue != Devices[v].nValue:
                         Devices[v].Update(nValue=newValue, sValue="")
+
+            # Custom devices
+            for k,v in self.custom_devices.items():
+                if k == 'CompressorON - Count' and 'CompressorON' in mp and 'CompressorON' in self.custom_data:
+                    newValue = 1 if mp['CompressorON'] and not self.custom_data['CompressorON'] else 0
+                    Devices[v].Update(nValue=0, sValue=str(newValue))
+                elif k == 'CompressorON - Time' and 'CompressorON' in mp and 'CompressorONTime' in self.custom_data:
+                    newValue = round(time.time() - self.custom_data['CompressorONTime']) if mp['CompressorON'] else 0
+                    Devices[v].Update(nValue=0, sValue=str(newValue))
+                elif k == 'Delta T' and 'T6' in mp and 'T7' in mp and 'CompressorON' in self.custom_data:
+                    newValue = (mp['T7'] - mp['T6']) if self.custom_data['CompressorON'] else 0
+                    Devices[v].Update(nValue=0, sValue=str(newValue))
+                elif k in mp:
+                    Devices[v].Update(nValue=0, sValue=str(mp[k]))
+
+            if 'CompressorON' in mp:
+                self.custom_data['CompressorON'] = mp['CompressorON']
+                self.custom_data['CompressorONTime'] = time.time()
+
+            # Expert devices
             if self.expertMode:
                 for k,v in self.x_switch_devices.items():
                     if k in mp:
                         newValue = int(mp[k])
                         if newValue != Devices[v].nValue:
                             Devices[v].Update(nValue=newValue, sValue="")
+
+            # Devices readiness
             if self.devMode == 1:
                 if 'WaitingStatus' in mp:
                     newValue = int(mp['WaitingStatus'] == 0)
@@ -157,11 +188,7 @@ class BasePlugin:
                         Devices[4].Update(nValue=newValue, sValue="")
                 self.devReady = False
             elif self.devMode == 2:
-                if 'HeatPumpEnabled' in mp:
-                    newValue = int(mp['HeatPumpEnabled'])
-                    if newValue != Devices[4].nValue:
-                        Devices[4].Update(nValue=newValue, sValue="")
-                if ('IsManual' in mp and 'WaitingStatus' in mp and 'WaitingTimer' in mp):
+                if 'IsManual' in mp and 'WaitingStatus' in mp and 'WaitingTimer' in mp:
                     self.devReady = (
                         mp['IsManual'] == 2
                         and
@@ -174,6 +201,8 @@ class BasePlugin:
         Domoticz.Debug("onMessageZPS called")
         if (sh["FNC"] == 0x50):
             mp = dev.parseRegisters(sh["RestMessage"], sh["RegStart"], sh["RegLen"])
+
+            # Temp and switch devices
             for k,v in self.temp_devices.items():
                 if k in mp:
                     Devices[v].Update(nValue=0, sValue=str(mp[k]))
@@ -182,18 +211,25 @@ class BasePlugin:
                     newValue = int(mp[k])
                     if newValue != Devices[v].nValue:
                         Devices[v].Update(nValue=newValue, sValue="")
+
+            # Custom devices
+            for k,v in self.custom_devices.items():
+                if k == 'SWH kWh Total' and 'TotalEnergy' in mp:
+                    Devices[v].Update(nValue=0, sValue=str(mp['TotalEnergy']))
+                elif k == 'SWH Generation' and 'TotalEnergy' in mp and 'CollectorPower' in mp:
+                    Devices[v].Update(nValue=0, sValue=str(mp['CollectorPower'])+";"+str(mp['TotalEnergy'] * 1000))
+                elif k == 'SWH Consumption' and 'Consumption' in mp:
+                    Devices[v].Update(nValue=0, sValue=str(mp['Consumption'])+";0")
+
+            # Expert devices
             if self.expertMode:
                 for k,v in self.x_switch_devices.items():
                     if k in mp:
                         newValue = int(mp[k])
                         if newValue != Devices[v].nValue:
                             Devices[v].Update(nValue=newValue, sValue="")
-            if 'TotalEnergy' in mp:
-                Devices[5].Update(nValue=0, sValue=str(mp['TotalEnergy']))
-                if 'CollectorPower' in mp:
-                    Devices[6].Update(nValue=0, sValue=str(mp['CollectorPower'])+";"+str(mp['TotalEnergy'] * 1000))
-            if 'Consumption' in mp:
-                Devices[7].Update(nValue=0, sValue=str(mp['Consumption'])+";0")
+
+            # Devices readiness
             if self.devMode == 3:
                 self.devReady = True
 
@@ -204,13 +240,7 @@ class BasePlugin:
 
             # PCWU specific command handling
             if (self.devMode == 2):
-                if (Unit == 4) and (Command == "On"):
-                    SendCommand(self, 'enable')
-                    Devices[Unit].Update(nValue=1, sValue="")
-                elif (Unit == 4) and (Command == "Off"):
-                    SendCommand(self, 'disable')
-                    Devices[Unit].Update(nValue=0, sValue="")
-                elif (Unit == 5) and (Command == "Set Level"):
+                if (Unit == 5) and (Command == "Set Level"):
                     SendCommand(self, 'setTapWaterTemp', Level)
                     Devices[Unit].Update(nValue=0, sValue=str(Level))
 
@@ -301,140 +331,83 @@ def onHeartbeat():
 
 
 # Generic helper functions
+def SetupDevice(unit, name, *args, **kwargs):
+    if unit not in Devices:
+        Domoticz.Device(Name=name, Unit=unit, *args, **kwargs).Create()
+    return unit
+
 def SetupDevicesPCWU(plugin):
-    if len(Devices) < 1:
-        Domoticz.Device(Name="T1 (ambient)", Unit=1, TypeName='Temperature').Create()
-    if len(Devices) < 2:
-        Domoticz.Device(Name="T2 (tank bottom)", Unit=2, TypeName='Temperature').Create()
-    if len(Devices) < 3:
-        Domoticz.Device(Name="T3 (tank top)", Unit=3, TypeName='Temperature').Create()
-    if len(Devices) < 4:
-        Domoticz.Device(Name="Heatpump Enabled", Unit=4, TypeName='Switch', Image=9).Create()
-    if len(Devices) < 5:
-        Domoticz.Device(Name="Tap Water Temp", Unit=5, Type=242, Subtype=1).Create()
-    if len(Devices) < 6:
-        Domoticz.Device(Name="T4 (solid fuel boiler)", Unit=6, TypeName='Temperature').Create()
-    if len(Devices) < 7:
-        Domoticz.Device(Name="T5 (void)", Unit=7, TypeName='Temperature').Create()
-    if len(Devices) < 8:
-        Domoticz.Device(Name="T6 (water inlet)", Unit=8, TypeName='Temperature').Create()
-    if len(Devices) < 9:
-        Domoticz.Device(Name="T7 (water outlet)", Unit=9, TypeName='Temperature').Create()
-    if len(Devices) < 10:
-        Domoticz.Device(Name="T8 (evaporator)", Unit=10, TypeName='Temperature').Create()
-    if len(Devices) < 11:
-        Domoticz.Device(Name="T9 (before compressor)", Unit=11, TypeName='Temperature').Create()
-    if len(Devices) < 12:
-        Domoticz.Device(Name="T10 (after compressor)", Unit=12, TypeName='Temperature').Create()
     plugin.temp_devices = {
-        'T1': 1, 'T2': 2, 'T3': 3, 'TapWaterTemp': 5, 'T4': 6, 'T5': 7, 'T6': 8, 'T7': 9, 'T8': 10, 'T9': 11, 'T10': 12
+        'T1': SetupDevice(1, "T1 (ambient)", TypeName='Temperature'),
+        'T2': SetupDevice(2, "T2 (tank bottom)", TypeName='Temperature'),
+        'T3': SetupDevice(3, "T3 (tank top)", TypeName='Temperature'),
+        'T4': SetupDevice(6, "T4 (solid fuel boiler)", TypeName='Temperature'),
+        'T5': SetupDevice(7, "T5 (void)", TypeName='Temperature'),
+        'T6': SetupDevice(8, "T6 (water inlet)", TypeName='Temperature'),
+        'T7': SetupDevice(9, "T7 (water outlet)", TypeName='Temperature'),
+        'T8': SetupDevice(10, "T8 (evaporator)", TypeName='Temperature'),
+        'T9': SetupDevice(11, "T9 (before compressor)", TypeName='Temperature'),
+        'T10': SetupDevice(12, "T10 (after compressor)", TypeName='Temperature'),
+        'TapWaterTemp': SetupDevice( 5, "Tap Water Temp", Type=242, Subtype=1),
     }
-    plugin.switch_devices = { }
+    plugin.switch_devices = {
+        'HeatPumpEnabled': SetupDevice(4, "Heatpump Enabled", TypeName='Switch', Image=9),
+    }
+    plugin.custom_devices = {
+        'CompressorON - Count': SetupDevice(25, "CompressorON - Count", Type=243, Subtype=28, Switchtype=3, Options={"ValueQuantity" : "Count", "ValueUnits": ""}),
+        'CompressorON - Time': SetupDevice(26, "CompressorON - Time", Type=243, Subtype=28, Switchtype=3, Options={"ValueQuantity" : "Time", "ValueUnits": "s"}),
+        'EV1': SetupDevice(27, "EV1", TypeName="Custom", Options={"Custom": "1;"}),
+        'Delta T': SetupDevice(28, "Delta T", TypeName="Custom", Options={"Custom": "1;°"}),
+    }
 
 def SetupExpertDevicesPCWU(plugin):
-    if len(Devices) < 13:
-        Domoticz.Device(Name="X - Anti Legionella Enabled", Unit=13, TypeName='Switch', Image=9).Create()
-    if len(Devices) < 14:
-        Domoticz.Device(Name="X - Anti Legionella Use Heater E", Unit=14, TypeName='Switch', Image=9).Create()
-    if len(Devices) < 15:
-        Domoticz.Device(Name="X - Anti Legionella Use Heater P", Unit=15, TypeName='Switch', Image=9).Create()
-    if len(Devices) < 16:
-        Domoticz.Device(Name="X - Anti Freezing Enabled", Unit=16, TypeName='Switch', Image=9).Create()
-    if len(Devices) < 17:
-        Domoticz.Device(Name="X - Heater E Enabled", Unit=17, TypeName='Switch', Image=9).Create()
-    if len(Devices) < 18:
-        Domoticz.Device(Name="X - Heater E Blocked When HP ON", Unit=18, TypeName='Switch', Image=9).Create()
-    if len(Devices) < 19:
-        Domoticz.Device(Name="X - Heater P Enabled", Unit=19, TypeName='Switch', Image=9).Create()
-    if len(Devices) < 20:
-        Domoticz.Device(Name="X - Heater P Blocked When HP ON", Unit=20, TypeName='Switch', Image=9).Create()
-    if len(Devices) < 21:
-        Domoticz.Device(Name="X - Ext. Controller HP OFF", Unit=21, TypeName='Switch', Image=9).Create()
-    if len(Devices) < 22:
-        Domoticz.Device(Name="X - Ext. Controller Heater E OFF", Unit=22, TypeName='Switch', Image=9).Create()
-    if len(Devices) < 23:
-        Domoticz.Device(Name="X - Ext. Controller Heater P OFF", Unit=23, TypeName='Switch', Image=9).Create()
-    if len(Devices) < 24:
-        Domoticz.Device(Name="X - Ext. Controller Pump F OFF", Unit=24, TypeName='Switch', Image=9).Create()
     plugin.x_switch_devices = {
-        'AntiLegionellaEnabled': 13,
-        'AntiLegionellaUseHeaterE': 14,
-        'AntiLegionellaUseHeaterP': 15,
-        'AntiFreezingEnabled': 16,
-        'HeaterEEnabled': 17,
-        'HeaterEBlocked': 18,
-        'HeaterPEnabled': 19,
-        'HeaterPBlocked': 20,
-        'ExtControllerHPOFF': 21,
-        'ExtControllerHeaterEOFF': 22,
-        'ExtControllerHeaterPOFF': 23,
-        'ExtControllerPumpFOFF': 24,
+        'AntiLegionellaEnabled': SetupDevice(13, "X - Anti Legionella Enabled", TypeName='Switch', Image=9),
+        'AntiLegionellaUseHeaterE': SetupDevice(14, "X - Anti Legionella Use Heater E", TypeName='Switch', Image=9),
+        'AntiLegionellaUseHeaterP': SetupDevice(15, "X - Anti Legionella Use Heater P", TypeName='Switch', Image=9),
+        'AntiFreezingEnabled': SetupDevice(16, "X - Anti Freezing Enabled", TypeName='Switch', Image=9),
+        'HeaterEEnabled': SetupDevice(17, "X - Heater E Enabled", TypeName='Switch', Image=9),
+        'HeaterEBlocked': SetupDevice(18, "X - Heater E Blocked When HP ON", TypeName='Switch', Image=9),
+        'HeaterPEnabled': SetupDevice(19, "X - Heater P Enabled", TypeName='Switch', Image=9),
+        'HeaterPBlocked': SetupDevice(20, "X - Heater P Blocked When HP ON", TypeName='Switch', Image=9),
+        'ExtControllerHPOFF': SetupDevice(21, "X - Ext. Controller HP OFF", TypeName='Switch', Image=9),
+        'ExtControllerHeaterEOFF': SetupDevice(22, "X - Ext. Controller Heater E OFF", TypeName='Switch', Image=9),
+        'ExtControllerHeaterPOFF': SetupDevice(23, "X - Ext. Controller Heater P OFF", TypeName='Switch', Image=9),
+        'ExtControllerPumpFOFF': SetupDevice(24, "X - Ext. Controller Pump F OFF", TypeName='Switch', Image=9),
     }
 
 def SetupDevicesZPS(plugin):
-    if len(Devices) < 1:
-        Domoticz.Device(Name="T1 (collectors)", Unit=1, TypeName='Temperature').Create()
-    if len(Devices) < 2:
-        Domoticz.Device(Name="T2 (tank bottom)", Unit=2, TypeName='Temperature').Create()
-    if len(Devices) < 3:
-        Domoticz.Device(Name="T3 (air separator)", Unit=3, TypeName='Temperature').Create()
-    if len(Devices) < 4:
-        Domoticz.Device(Name="T4 (tank top)", Unit=4, TypeName='Temperature').Create()
-    if len(Devices) < 5:
-        Domoticz.Device(Name="SWH kWh Total", Unit=5, TypeName='Custom', Options={'Custom': '1;kWh'}).Create()
-    if len(Devices) < 6:
-        Domoticz.Device(Name="SWH Generation", Unit=6, TypeName='kWh', Switchtype=4).Create()
-    if len(Devices) < 7:
-        Domoticz.Device(Name="SWH Consumption", Unit=7, TypeName='kWh', Options={'EnergyMeterMode':'1'}).Create()
-    if len(Devices) < 8:
-        Domoticz.Device(Name="Night Cooling Enabled", Unit=8, TypeName='Switch', Image=9).Create()
-    if len(Devices) < 9:
-        Domoticz.Device(Name="Night Cooling Start Temp", Unit=9, Type=242, Subtype=1).Create()
-    if len(Devices) < 10:
-        Domoticz.Device(Name="Night Cooling Stop Temp", Unit=10, Type=242, Subtype=1).Create()
-    if len(Devices) < 11:
-        Domoticz.Device(Name="Collector Pump Max Temp", Unit=11, Type=242, Subtype=1).Create()
-    if len(Devices) < 12:
-        Domoticz.Device(Name="Collector Overheat Protection Max Temp", Unit=12, Type=242, Subtype=1).Create()
-    if len(Devices) < 13:
-        Domoticz.Device(Name="Collector Overheat Protection Enabled", Unit=13, TypeName='Switch', Image=9).Create()
-    if len(Devices) < 14:
-        Domoticz.Device(Name="Collector Freezing Protection Enabled", Unit=14, TypeName='Switch', Image=9).Create()
-    if len(Devices) < 15:
-        Domoticz.Device(Name="Tank Overheat Protection Enabled", Unit=15, TypeName='Switch', Image=9).Create()
     plugin.temp_devices = {
-        'T1': 1, 'T2': 2, 'T3': 3, 'T4': 4, 'NightCoolingStartTemp': 9, 'NightCoolingStopTemp': 10, 'CollectorPumpMaxTemp': 11, 'CollectorOverheatProtMaxTemp': 12
+        'T1': SetupDevice(1, "T1 (collectors)", TypeName='Temperature'),
+        'T2': SetupDevice(2, "T2 (tank bottom)", TypeName='Temperature'),
+        'T3': SetupDevice(3, "T3 (air separator)", TypeName='Temperature'),
+        'T4': SetupDevice(4, "T4 (tank top)", TypeName='Temperature'),
+        'NightCoolingStartTemp': SetupDevice(9, "Night Cooling Start Temp", Type=242, Subtype=1),
+        'NightCoolingStopTemp': SetupDevice(10, "Night Cooling Stop Temp", Type=242, Subtype=1),
+        'CollectorPumpMaxTemp': SetupDevice(11, "Collector Pump Max Temp", Type=242, Subtype=1),
+        'CollectorOverheatProtMaxTemp': SetupDevice(12, "Collector Overheat Protection Max Temp", Type=242, Subtype=1),
     }
     plugin.switch_devices = {
-        'NightCoolingEnabled': 8,
-        'CollectorOverheatProtEnabled': 13,
-        'CollectorFreezingProtEnabled': 14,
-        'TankOverheatProtEnabled': 15,
+        'NightCoolingEnabled': SetupDevice(8, "Night Cooling Enabled", TypeName='Switch', Image=9),
+        'CollectorOverheatProtEnabled': SetupDevice(13, "Collector Overheat Protection Enabled", TypeName='Switch', Image=9),
+        'CollectorFreezingProtEnabled': SetupDevice(14, "Collector Freezing Protection Enabled", TypeName='Switch', Image=9),
+        'TankOverheatProtEnabled': SetupDevice(15, "Tank Overheat Protection Enabled", TypeName='Switch', Image=9),
+    }
+    plugin.custom_devices = {
+        'SWH kWh Total': SetupDevice(5, "SWH kWh Total", TypeName='Custom', Options={'Custom': '1;kWh'}),
+        'SWH Generation': SetupDevice(6, "SWH Generation", TypeName='kWh', Switchtype=4),
+        'SWH Consumption': SetupDevice(7, "SWH Consumption", TypeName='kWh', Options={'EnergyMeterMode':'1'}),
     }
 
 def SetupExpertDevicesZPS(plugin):
-    if len(Devices) < 16:
-        Domoticz.Device(Name="X - Alarm Sound Enabled", Unit=16, TypeName='Switch', Image=9).Create()
-    if len(Devices) < 17:
-        Domoticz.Device(Name="X - Key Sound Enabled", Unit=17, TypeName='Switch', Image=9).Create()
-    if len(Devices) < 18:
-        Domoticz.Device(Name="X - Holiday Enabled", Unit=18, TypeName='Switch', Image=9).Create()
-    if len(Devices) < 19:
-        Domoticz.Device(Name="X - Pump Regulation Enabled", Unit=19, TypeName='Switch', Image=9).Create()
-    if len(Devices) < 20:
-        Domoticz.Device(Name="X - Legionella Protection Enabled", Unit=20, TypeName='Switch', Image=9).Create()
-    if len(Devices) < 21:
-        Domoticz.Device(Name="X - Pressure Switch Enabled", Unit=21, TypeName='Switch', Image=9).Create()
-    if len(Devices) < 22:
-        Domoticz.Device(Name="X - Circulation Pump Enabled", Unit=22, TypeName='Switch', Image=9).Create()
     plugin.x_switch_devices = {
-        'AlarmSoundEnabled': 16,
-        'KeySoundEnabled': 17,
-        'HolidayEnabled': 18,
-        'PumpRegulationEnabled': 19,
-        'LegionellaProtEnabled': 20,
-        'PressureSwitchEnabled': 21,
-        'CirculationPumpEnabled': 22,
+        'AlarmSoundEnabled': SetupDevice(16, "X - Alarm Sound Enabled", TypeName='Switch', Image=9),
+        'KeySoundEnabled': SetupDevice(17, "X - Key Sound Enabled", TypeName='Switch', Image=9),
+        'HolidayEnabled': SetupDevice(18, "X - Holiday Enabled", TypeName='Switch', Image=9),
+        'PumpRegulationEnabled': SetupDevice(19, "X - Pump Regulation Enabled", TypeName='Switch', Image=9),
+        'LegionellaProtEnabled': SetupDevice(20, "X - Legionella Protection Enabled", TypeName='Switch', Image=9),
+        'PressureSwitchEnabled': SetupDevice(21, "X - Pressure Switch Enabled", TypeName='Switch', Image=9),
+        'CirculationPumpEnabled': SetupDevice(22, "X - Circulation Pump Enabled", TypeName='Switch', Image=9),
     }
 
 def SendCommand(plugin, command, *args, **kwargs):
