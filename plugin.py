@@ -8,7 +8,7 @@
 # https://github.com/aelias-eu/hewalex-geco-protocol
 
 """
-<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.7.1">
+<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.7.2">
     <description>
         <h2>Hewalex Plugin</h2><br/>
         <h3>Features</h3>
@@ -83,6 +83,7 @@ class BasePlugin:
     switch_devices = {}
     custom_devices = {}
     x_switch_devices = {}
+    x_custom_devices = {}
 
     custom_data = {}
 
@@ -144,6 +145,11 @@ class BasePlugin:
         if (self.devMode == 1 and sh["FNC"] == 0x60) or (self.devMode == 2 and sh["FNC"] == 0x50):
             mp = dev.parseRegisters(sh["RestMessage"], sh["RegStart"], sh["RegLen"])
 
+            # Device status
+            if 'WaitingStatus' in mp:
+                devReady, devStatus, devWaiting, devProgram, devError = PCWUStatus(mp)
+                self.devReady = devReady if self.devMode == 2 else False
+
             # Temp and switch devices
             for k,v in self.temp_devices.items():
                 if k in mp:
@@ -179,28 +185,24 @@ class BasePlugin:
                         newValue = int(mp[k])
                         if newValue != Devices[v].nValue:
                             Devices[v].Update(nValue=newValue, sValue="")
-
-            # Devices readiness
-            if self.devMode == 1:
-                if 'WaitingStatus' in mp:
-                    newValue = int(mp['WaitingStatus'] == 0)
-                    if newValue != Devices[4].nValue:
-                        Devices[4].Update(nValue=newValue, sValue="")
-                self.devReady = False
-            elif self.devMode == 2:
-                if 'IsManual' in mp and 'WaitingStatus' in mp and 'WaitingTimer' in mp:
-                    self.devReady = (
-                        mp['IsManual'] == 2
-                        and
-                        (mp['WaitingStatus'] == 0 or mp['WaitingStatus'] == 2)
-                        and
-                        mp['WaitingTimer'] == 0
-                    )
+                for k,v in self.x_custom_devices.items():
+                    if k in mp:
+                        if k == 'InstallationScheme':
+                            newValue = min(max(int(mp[k]), 1), 9) * 10
+                        elif k == 'WaterPumpOperationMode':
+                            newValue = min(max(int(mp[k]), 0), 1) * 10
+                        else:
+                            newValue = min(max(int(mp[k]), 0), 2) * 10
+                        Devices[v].Update(nValue=0, sValue=str(newValue))
 
     def onMessageZPS(self, dev, h, sh, m):
         Domoticz.Debug("onMessageZPS called")
         if (sh["FNC"] == 0x50):
             mp = dev.parseRegisters(sh["RestMessage"], sh["RegStart"], sh["RegLen"])
+
+            # Device status
+            if self.devMode == 3:
+                self.devReady = True
 
             # Temp and switch devices
             for k,v in self.temp_devices.items():
@@ -228,10 +230,6 @@ class BasePlugin:
                         newValue = int(mp[k])
                         if newValue != Devices[v].nValue:
                             Devices[v].Update(nValue=newValue, sValue="")
-
-            # Devices readiness
-            if self.devMode == 3:
-                self.devReady = True
 
     def onCommand(self, Unit, Command, Level, Hue):
         Domoticz.Debug("onCommand called for unit %d with command %s, level %s." % (Unit, Command, Level))
@@ -272,6 +270,16 @@ class BasePlugin:
                             nValue = 1 if (Command == "On") else 0
                             SendCommand(self, 'writeRegister', k, nValue)
                             Devices[Unit].Update(nValue=nValue, sValue="")
+                    for k,v in self.x_custom_devices.items():
+                        if (Unit == v):
+                            if k == 'InstallationScheme':
+                                nValue = min(max(int(Level / 10), 1), 9)
+                            elif k == 'WaterPumpOperationMode':
+                                nValue = min(max(int(Level / 10), 0), 1)
+                            else:
+                                nValue = min(max(int(Level / 10), 0), 2)
+                            SendCommand(self, 'writeRegister', k, nValue)
+                            Devices[Unit].Update(nValue=0, sValue=str(Level))
 
             return True     # TODO - check if command actually succeeded
 
@@ -331,6 +339,94 @@ def onHeartbeat():
 
 
 # Generic helper functions
+PCWU_STATUS_OFF = 0         # Turned OFF through controller
+PCWU_STATUS_WAITING = 10    # Waiting for some condition to clear (see below)
+PCWU_STATUS_IDLE = 20       # Idle
+PCWU_STATUS_RUNNING = 30    # Running program (see below)
+PCWU_STATUS_ERROR = 40      # Error condition (see below)
+
+PCWU_WAITING_NONE = 0       # Not waiting
+PCWU_WAITING_EXTOFF = 10    # Ext OFF contact closed
+PCWU_WAITING_HPOFF = 20     # Disabled through controller menu (reg 304)
+PCWU_WAITING_STOP = 30      # Temporarily disabled while counting down
+PCWU_WAITING_LOWCOP = 40    # Ambient temperature too low
+
+PCWU_PROGRAM_NONE = 0       # No program running
+PCWU_PROGRAM_HEAT = 10      # Tap water heating program
+PCWU_PROGRAM_DEFROST = 20   # Evaporator defrost program
+PCWU_PROGRAM_LOWTEMP = 30   # Tank antifreeze protection
+PCWU_PROGRAM_ANTIFREEZ = 40 # HP antifreeze protection
+PCWU_PROGRAM_PREHEAT = 50   # Compressor preheat program
+
+PCWU_ERROR_NONE = 0
+PCWU_ERROR_LOWPRES = 10     # Low pressure (alarm 17)
+PCWU_ERROR_HIGHPRES = 20    # High pressure (alarm 18)
+PCWU_ERROR_OVERTEMP = 30    # Over temp (alarm 21)
+
+def PCWUStatus(mp):
+    devReady = False
+    devStatus = PCWU_STATUS_OFF
+    devWaiting = PCWU_WAITING_NONE
+    devProgram = PCWU_PROGRAM_NONE
+    devError = PCWU_ERROR_NONE
+
+    if 'IsManual' in mp and 'WaitingStatus' in mp and 'WaitingTimer' in mp:
+        devReady = (
+            mp['IsManual'] == 2                                         # Controller is on
+            and
+            (mp['WaitingStatus'] == 0 or mp['WaitingStatus'] == 2)      # Executive module is available for operation
+            and
+            mp['WaitingTimer'] == 0                                     # Heatpump is available for operation
+        )
+
+        # Determine waiting status
+        if mp['WaitingStatus'] == 1:
+            devWaiting = PCWU_WAITING_EXTOFF
+        elif mp['WaitingStatus'] == 2:
+            devWaiting = PCWU_WAITING_HPOFF
+        elif mp['WaitingStatus'] == 32:
+            devWaiting = PCWU_WAITING_STOP
+        elif mp['WaitingStatus'] == 64:
+            devWaiting = PCWU_WAITING_LOWCOP
+
+        # Determine error status
+        if mp['WaitingStatus'] == 4:
+            devError = PCWU_ERROR_LOWPRES
+        elif mp['WaitingStatus'] == 8:
+            devError = PCWU_ERROR_HIGHPRES
+        elif mp['WaitingStatus'] == 1024:
+            devError = PCWU_ERROR_OVERTEMP
+        else:
+            devError = PCWU_ERROR_NONE
+
+        # Determine device status
+        if mp['IsManual'] != 2:
+            devStatus = PCWU_STATUS_OFF
+        elif devWaiting != PCWU_WAITING_NONE:
+            devStatus = PCWU_STATUS_WAITING
+        elif devError != PCWU_ERROR_NONE:
+            devStatus = PCWU_STATUS_ERROR
+        elif mp['HeatPumpON']:
+            devStatus = PCWU_STATUS_RUNNING
+        else:
+            devStatus = PCWU_STATUS_IDLE
+
+        # Determine device program
+        if devStatus != PCWU_STATUS_RUNNING:
+            devProgram = PCWU_PROGRAM_NONE
+        elif mp['WaitingStatus'] == 16:
+            devProgram = PCWU_PROGRAM_DEFROST
+        elif mp['WaitingStatus'] == 128:
+            devProgram = PCWU_PROGRAM_LOWTEMP
+        elif mp['WaitingStatus'] == 256:
+            devProgram = PCWU_PROGRAM_ANTIFREEZ
+        elif mp['WaitingStatus'] == 512:
+            devProgram = PCWU_PROGRAM_PREHEAT
+        else:
+            devProgram = PCWU_PROGRAM_HEAT
+
+    return devReady, devStatus, devWaiting, devProgram, devError
+
 def SetupDevice(unit, name, *args, **kwargs):
     if unit not in Devices:
         Domoticz.Device(Name=name, Unit=unit, *args, **kwargs).Create()
@@ -361,6 +457,7 @@ def SetupDevicesPCWU(plugin):
     }
 
 def SetupExpertDevicesPCWU(plugin):
+
     plugin.x_switch_devices = {
         'AntiLegionellaEnabled': SetupDevice(13, "X - Anti Legionella Enabled", TypeName='Switch', Image=9),
         'AntiLegionellaUseHeaterE': SetupDevice(14, "X - Anti Legionella Use Heater E", TypeName='Switch', Image=9),
@@ -374,6 +471,13 @@ def SetupExpertDevicesPCWU(plugin):
         'ExtControllerHeaterEOFF': SetupDevice(22, "X - Ext. Controller Heater E OFF", TypeName='Switch', Image=9),
         'ExtControllerHeaterPOFF': SetupDevice(23, "X - Ext. Controller Heater P OFF", TypeName='Switch', Image=9),
         'ExtControllerPumpFOFF': SetupDevice(24, "X - Ext. Controller Pump F OFF", TypeName='Switch', Image=9),
+    }
+
+    plugin.x_custom_devices = {
+        'InstallationScheme': SetupDevice(29, "X - Installation Scheme", TypeName="Selector Switch", Image=11, Options={"LevelActions": "|||||||||", "LevelNames": "-|1|2|3|4|5|6|7|8|9", "LevelOffHidden": "true"}),
+        'TapWaterSensor': SetupDevice(30, "X - Tap Water Sensor", TypeName="Selector Switch", Image=11, Options={"LevelActions": "||", "LevelNames": "T2|T3|T7"}),
+        'WaterPumpOperationMode': SetupDevice(31, "X - Water Pump Operation Mode", TypeName="Selector Switch", Image=11, Options={"LevelActions": "|", "LevelNames": "Cont|Sync"}),
+        'FanOperationMode': SetupDevice(32, "X - Fan Operation Mode", TypeName="Selector Switch", Image=11, Options={"LevelActions": "||", "LevelNames": "Max|Min|Day/Night"}),
     }
 
 def SetupDevicesZPS(plugin):
@@ -409,6 +513,7 @@ def SetupExpertDevicesZPS(plugin):
         'PressureSwitchEnabled': SetupDevice(21, "X - Pressure Switch Enabled", TypeName='Switch', Image=9),
         'CirculationPumpEnabled': SetupDevice(22, "X - Circulation Pump Enabled", TypeName='Switch', Image=9),
     }
+    plugin.x_custom_devices = {}
 
 def SendCommand(plugin, command, *args, **kwargs):
     ser = serial.serial_for_url(plugin.baseUrl)
