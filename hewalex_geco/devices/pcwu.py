@@ -71,10 +71,10 @@ class PCWU(BaseDevice):
         166: { 'type': 'word', 'name': 'unknown5',                      'desc': 'Unknown, observed values are 1 (krzysztof1111111111) and 3 (mvdklip)' },
         192: { 'type': 'word', 'name': 'unknown3',                      'desc': 'Unknown, observed values are 49659, 49663 and 50175; probably a bitmask' },
         194: { 'type': 'word', 'name': 'IsManual',                      'desc': 'Unknown, 2 when controller on, 1 when controller off' },
-        196: { 'type': 'mask', 'name': [                                # TODO - Add flags for Heater P, Boiler Pump, ...
+        196: { 'type': 'mask', 'name': [                                # TODO - Add flags for Heater P, Boiler Pump F, Circulation Pump C, ...
             'FanON',                                                    # Fan ON (True/False)
             None,
-            'CirculationPumpON',                                        # Circulation pump ON (True/False)
+            'WaterPumpON',                                              # Water pump ON (True/False)
             None,
             None,
             'HeatPumpON',                                               # Heat pump ON (True/False)
@@ -87,7 +87,7 @@ class PCWU(BaseDevice):
             'HeaterEON',                                                # Heater E ON (True/False)
         ]},
         198: { 'type': 'word', 'name': 'EV1',                           'desc': 'Expansion Valve 1 - Current opening (step value) of the expansion valve' },
-        202: { 'type': 'word', 'name': 'WaitingStatus',                 'desc': '0 when available for operation, 2 when disabled through register 304, 4 when low COP, 32 when just stopped and waiting to be restarted' },
+        202: { 'type': 'word', 'name': 'WaitingStatus',                 'desc': '0 when available for operation, 2 when disabled through register 304, 64 when low COP, 32 when just stopped and waiting to be restarted' },
         206: { 'type': 'word', 'name': 'WaitingTimer',                  'desc': 'Timer counting down to 0 when just stopped and waiting to be available for operation again' },
         210: { 'type': 'word', 'name': 'unknown7',                      'desc': 'Unknown, observed value is 0 and is possibly related to alarms' },
         218: { 'type': 'word', 'name': 'unknown8',                      'desc': 'Unknown, observed value is 0' },
