@@ -44,7 +44,7 @@
 # 570000: 57600
 # 1152000: 115200
 """
-<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.7.2">
+<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.8.0">
     <description>
         <h2>Hewalex Plugin</h2><br/>
         <h3>Features</h3>
