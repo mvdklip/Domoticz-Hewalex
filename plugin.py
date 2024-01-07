@@ -578,7 +578,7 @@ def SetupExpertDevicesZPS(plugin):
 def SendCommand(plugin, command, *args, **kwargs):
     if plugin.baseUrl == None:
         ser = plugin.serial_parameters
-        ser = serial.Serial(port=plugin.serialPort,baudrate=ser.baud_rate,bytesize=ser.byte_size,parity=ser.parity,stopbits=ser.stop_bits)
+        ser = serial.Serial(port=plugin.serialPort,baudrate=ser['baud_rate'],bytesize=ser['byte_size'],parity=ser['parity'],stopbits=ser['stop_bits'])
     else:
         ser = serial.serial_for_url(plugin.baseUrl)
     dev = None
