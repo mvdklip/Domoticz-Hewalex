@@ -125,6 +125,10 @@ class BasePlugin:
 
     serialConfig = 0    # Default IP mode, so 0, none 0 --> serial parameters
     serialPort = None   # Device to access serial port on, such as /Dev/ttyUSB0
+    serBaudrate = 0     # Baudrate for serial communication
+    serParity = None    # Parity for serial communication
+    serStopbits = None  # Stop bits for serial communication
+    serBytesize = None  # Bytesize for serial communication
     devMode = None      # Operating mode of device (1 = PCWU - Eavesdropping, 2 = PCWU - Direct comms, 3 = ZPS - Direct comms)
     devReady = False    # Is device ready to accept commands?
 
@@ -165,7 +169,11 @@ class BasePlugin:
         else:
             self.serialPort = Parameters["SerialPort"]
             self.serial_parameters = decode_serial_parameters(self.serialConfig)
-            Domoticz.Debug("Serial config is set to %s" % self.serial_parameters)
+            self.serBaudrate = (int) self.serial_parameters['baud_rate']
+            self.serParity =  self.serial_parameters['parity']
+            self.serStopbits = self.serial_parameters['stop_bits']
+            self.serBytesize = self.serial_parameters['byte_size']
+            Domoticz.Debug("Serial config is set to baudrate: %s, bytesize: %s, parity: %s, stopbits: %s" % (self.serBaudrate, self.serBytesize, self.serParity, self.serStopbits))
 
         allIds = Parameters["Mode4"].split(";")
         if len(allIds) == 2:
@@ -576,8 +584,7 @@ def SetupExpertDevicesZPS(plugin):
 
 def SendCommand(plugin, command, *args, **kwargs):
     if plugin.baseUrl == None:
-        ser = plugin.serial_parameters
-        ser = serial.Serial(port=plugin.serialPort,baudrate=ser['baud_rate'],bytesize=ser['byte_size'],parity=ser['parity'],stopbits=ser['stop_bits'])
+        ser = serial.Serial(port=plugin.serialPort,baudrate=plugin.serBaudrate,bytesize=plugin.serBytesize,parity=plugin.serParity,stopbits=plugin.serStopbits)
     else:
         ser = serial.serial_for_url(plugin.baseUrl)
     dev = None
