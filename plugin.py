@@ -166,8 +166,7 @@ class BasePlugin:
             self.serialPort = Parameters["SerialPort"]
             self.serial_parameters = decode_serial_parameters(self.serialConfig)
             Domoticz.Debug("Serial config is set to %s" % self.serial_parameters)
-            
-            
+
         allIds = Parameters["Mode4"].split(";")
         if len(allIds) == 2:
             conIds = allIds[0].split(',')
@@ -358,7 +357,7 @@ class BasePlugin:
                     if attempt > 1:
                         Domoticz.Debug("Previous attempt failed, trying again...")
                 else:
-                    Domoticz.Error("Failed to retrieve data from %s, cancelling..." % self.baseUrl)
+                    Domoticz.Error("Failed to retrieve data from %s, cancelling..." % self.baseUrl or self.serialPort )
                     break
                 attempt += 1
 
@@ -369,7 +368,7 @@ class BasePlugin:
                         SendCommand(self, 'readStatusRegisters')
                         SendCommand(self, 'readConfigRegisters')
                 except Exception as e:
-                    Domoticz.Log("Exception from %s; %s" % (self.baseUrl, e))
+                    Domoticz.Log("Exception from %s; %s" % (self.baseUrl or self.serialPort, e))
                     self.devReady = False
                 else:
                     break
