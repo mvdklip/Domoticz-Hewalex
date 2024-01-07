@@ -159,10 +159,10 @@ class BasePlugin:
         else:
             Domoticz.Debugging(0)
 
-        if self.serialConfig == 0
+        if self.serialConfig == 0:
             self.baseUrl = "socket://%s:%s" % (Parameters["Address"], Parameters["Port"])
             Domoticz.Debug("Base URL is set to %s" % self.baseUrl)
-        else
+        else:
             self.serialPort = Parameters["SerialPort"]
             self.serial_parameters = decode_serial_parameters(self.serialConfig)
             Domoticz.Debug("Serial config is set to %s" % self.serial_parameters)
@@ -576,10 +576,10 @@ def SetupExpertDevicesZPS(plugin):
     plugin.x_custom_devices = {}
 
 def SendCommand(plugin, command, *args, **kwargs):
-    if plugin.baseUrl == None
-        ser = plugin.serial_parameters.
+    if plugin.baseUrl == None:
+        ser = plugin.serial_parameters
         ser = serial.Serial(port=plugin.serialPort,baudrate=ser.baud_rate,bytesize=ser.byte_size,parity=ser.parity,stopbits=ser.stop_bits)
-    else
+    else:
         ser = serial.serial_for_url(plugin.baseUrl)
     dev = None
 
