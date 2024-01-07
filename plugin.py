@@ -584,8 +584,10 @@ def SetupExpertDevicesZPS(plugin):
 
 def SendCommand(plugin, command, *args, **kwargs):
     if plugin.baseUrl == None:
+        Domoticz.Debug("Serial config is set to baudrate: %s, bytesize: %s, parity: %s, stopbits: %s" % (plugin.serBaudrate, plugin.serBytesize, plugin.serParity, plugin.serStopbits))
         ser = serial.Serial(port=plugin.serialPort,baudrate=plugin.serBaudrate,bytesize=plugin.serBytesize,parity=plugin.serParity,stopbits=plugin.serStopbits)
     else:
+        Domoticz.Debug("Serial config is set to IP address and port: %s" % plugin.baseUrl)
         ser = serial.serial_for_url(plugin.baseUrl)
     dev = None
 
