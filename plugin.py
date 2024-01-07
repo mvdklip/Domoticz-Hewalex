@@ -169,7 +169,7 @@ class BasePlugin:
         else:
             self.serialPort = Parameters["SerialPort"]
             self.serial_parameters = decode_serial_parameters(self.serialConfig)
-            self.serBaudrate = (int) self.serial_parameters['baud_rate']
+            self.serBaudrate = self.serial_parameters['baud_rate']
             self.serParity =  self.serial_parameters['parity']
             self.serStopbits = self.serial_parameters['stop_bits']
             self.serBytesize = self.serial_parameters['byte_size']
