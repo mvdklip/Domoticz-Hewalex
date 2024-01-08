@@ -6,9 +6,45 @@
 #
 # https://www.elektroda.pl/rtvforum/topic3499254.html
 # https://github.com/aelias-eu/hewalex-geco-protocol
+#
+# Serial port encoding config
 
+# Parity
+
+# 0: serial.PARITY_NONE
+# 1: serial.PARITY_EVEN
+# 2: serial.PARITY_ODD
+# 3: serial.PARITY_MARK
+# 4: serial.PARITY_SPACE
+
+# Stop bits
+
+# 0: serial.STOPBITS_ONE
+# 8: serial.STOPBITS_ONE_POINT_FIVE
+# 16: serial.STOPBITS_TWO
+# Note that 1.5 stop bits are not supported on POSIX. It will fall back to 2 stop bits.
+
+# Byte size
+
+# 0: serial.FIVEBITS
+# 32: serial.SIXBITS
+# 64: serial.SEVENBITS
+# 96: serial.EIGHTBITS
+
+# Baud
+# 3000: 300
+# 6000: 600
+# 12000: 1200
+# 18000: 1800
+# 24000: 2400
+# 48000: 4800
+# 96000: 9600
+# 192000: 19200
+# 384000: 38400
+# 570000: 57600
+# 1152000: 115200
 """
-<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.7.2">
+<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.8.0">
     <description>
         <h2>Hewalex Plugin</h2><br/>
         <h3>Features</h3>
@@ -17,8 +53,21 @@
         </ul>
     </description>
     <params>
-        <param field="Address" label="IP Address" width="200px" required="true"/>
-        <param field="Port" label="Port" width="30px" required="true" default="8899"/>
+        <param field="SerialPort" label="Serial port" width="200px" default="/dev/ttyUSB0"/>
+        <param field="Address" label="IP Address" width="200px" />
+        <param field="Port" label="Port" width="30px" default="8899"/>
+        <param field="Mode1" label="IP or Serial" width="200px" required="true">
+            <options>
+                <option label="Use IP address" value="0" default="true"/>
+                <option label="Serial - 9600-8-N-1" value="96096"/>
+                <option label="Serial - 19200-8-N-1" value="192096"/>
+                <option label="Serial - 28800-8-N-1" value="288096"/>
+                <option label="Serial - 38400-8-N-1" value="384096"/>
+                <option label="Serial - 57600-8-N-1" value="576096"/>
+                <option label="Serial - 76800-8-N-1" value="768096"/>
+                <option label="Serial - 115200-8-N-1" value="1152096"/>
+            </options>
+        </param>
         <param field="Mode2" label="Device & Mode" width="200px" required="true">
             <options>
                 <option label="PCWU - Eavesdropping" value="1" default="true"/>
@@ -74,11 +123,18 @@ class BasePlugin:
     devHardId = 2
     devSoftId = 2       # Device hard and soft Ids
 
+    serialConfig = 0    # Default IP mode, so 0, none 0 --> serial parameters
+    serialPort = None   # Device to access serial port on, such as /Dev/ttyUSB0
+    serBaudrate = 0     # Baudrate for serial communication
+    serParity = None    # Parity for serial communication
+    serStopbits = None  # Stop bits for serial communication
+    serBytesize = None  # Bytesize for serial communication
     devMode = None      # Operating mode of device (1 = PCWU - Eavesdropping, 2 = PCWU - Direct comms, 3 = ZPS - Direct comms)
     devReady = False    # Is device ready to accept commands?
 
     expertMode = False  # Expert mode enabled?
 
+    serial_parameters = {}
     temp_devices = {}
     switch_devices = {}
     custom_devices = {}
@@ -93,6 +149,8 @@ class BasePlugin:
     def onStart(self):
         Domoticz.Debug("onStart called")
 
+        self.serialConfig = int(Parameters["Mode1"])
+
         self.devMode = int(Parameters["Mode2"])
         Domoticz.Debug("Device & Mode is set to %d" % self.devMode)
 
@@ -105,8 +163,17 @@ class BasePlugin:
         else:
             Domoticz.Debugging(0)
 
-        self.baseUrl = "socket://%s:%s" % (Parameters["Address"], Parameters["Port"])
-        Domoticz.Debug("Base URL is set to %s" % self.baseUrl)
+        if self.serialConfig == 0:
+            self.baseUrl = "socket://%s:%s" % (Parameters["Address"], Parameters["Port"])
+            Domoticz.Debug("Base URL is set to %s" % self.baseUrl)
+        else:
+            self.serialPort = Parameters["SerialPort"]
+            self.serial_parameters = decode_serial_parameters(self.serialConfig)
+            self.serBaudrate = self.serial_parameters['baud_rate']
+            self.serParity =  self.serial_parameters['parity']
+            self.serStopbits = self.serial_parameters['stop_bits']
+            self.serBytesize = self.serial_parameters['byte_size']
+            Domoticz.Debug("Serial config is set to baudrate: %s, bytesize: %s, parity: %s, stopbits: %s" % (self.serBaudrate, self.serBytesize, self.serParity, self.serStopbits))
 
         allIds = Parameters["Mode4"].split(";")
         if len(allIds) == 2:
@@ -298,7 +365,7 @@ class BasePlugin:
                     if attempt > 1:
                         Domoticz.Debug("Previous attempt failed, trying again...")
                 else:
-                    Domoticz.Error("Failed to retrieve data from %s, cancelling..." % self.baseUrl)
+                    Domoticz.Error("Failed to retrieve data from %s, cancelling..." % self.baseUrl or self.serialPort )
                     break
                 attempt += 1
 
@@ -309,7 +376,7 @@ class BasePlugin:
                         SendCommand(self, 'readStatusRegisters')
                         SendCommand(self, 'readConfigRegisters')
                 except Exception as e:
-                    Domoticz.Log("Exception from %s; %s" % (self.baseUrl, e))
+                    Domoticz.Log("Exception from %s; %s" % (self.baseUrl or self.serialPort, e))
                     self.devReady = False
                 else:
                     break
@@ -516,7 +583,12 @@ def SetupExpertDevicesZPS(plugin):
     plugin.x_custom_devices = {}
 
 def SendCommand(plugin, command, *args, **kwargs):
-    ser = serial.serial_for_url(plugin.baseUrl)
+    if plugin.baseUrl == None:
+        Domoticz.Debug("Serial config is set to baudrate: %s, bytesize: %s, parity: %s, stopbits: %s" % (plugin.serBaudrate, plugin.serBytesize, plugin.serParity, plugin.serStopbits))
+        ser = serial.Serial(port=plugin.serialPort,baudrate=plugin.serBaudrate,bytesize=plugin.serBytesize,parity=plugin.serParity,stopbits=plugin.serStopbits)
+    else:
+        Domoticz.Debug("Serial config is set to IP address and port: %s" % plugin.baseUrl)
+        ser = serial.serial_for_url(plugin.baseUrl)
     dev = None
 
     if (plugin.devMode == 1) or (plugin.devMode == 2):
@@ -546,3 +618,44 @@ def DumpConfigToLog():
         Domoticz.Debug("Device sValue:   '" + Devices[x].sValue + "'")
         Domoticz.Debug("Device LastLevel: " + str(Devices[x].LastLevel))
     return
+
+def decode_serial_parameters(value):
+    # Extracting parity (next digit)
+    parity_mapping = {
+        0: serial.PARITY_NONE,
+        1: serial.PARITY_EVEN,
+        2: serial.PARITY_ODD,
+        3: serial.PARITY_MARK,
+        4: serial.PARITY_SPACE
+    }
+    parity_value = value & 7
+    parity = parity_mapping.get(parity_value, "Unknown")
+    
+    # Extracting stop bits (next digit)
+    stop_bits_mapping = {
+        0: serial.STOPBITS_ONE,
+        8: serial.STOPBITS_ONE_POINT_FIVE,  # Will fall back to 2 on POSIX
+        16: serial.STOPBITS_TWO
+    }
+    stop_bits_value = value & 24
+    stop_bits = stop_bits_mapping.get(stop_bits_value, "Unknown")
+    
+    # Extracting byte size (last digit)
+    byte_size_mapping = {
+        0: serial.FIVEBITS,
+        32: serial.SIXBITS,
+        64: serial.SEVENBITS,
+        96: serial.EIGHTBITS
+    }
+    byte_size_value = value & 96
+    byte_size = byte_size_mapping.get(byte_size_value, "Unknown")
+
+    # Extracting baud rate (first two digits)
+    baud_rate = (value // 100) * 10 
+    
+    return {
+        "baud_rate": baud_rate,
+        "parity": parity,
+        "stop_bits": stop_bits,
+        "byte_size": byte_size
+    }
