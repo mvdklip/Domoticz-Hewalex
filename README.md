@@ -7,11 +7,11 @@ Tested with Python version 3.8, Domoticz versions 2020.2 and 2021.1
 
 ### Heat pumps (PCWU)
 
-RS485 to Wi-Fi device setup and either eavesdropping on the communication between the G-426 controller and the PCWU or communicating directly to the PCWU over a dedicated RS485 port. Eavesdropping is easier to setup and allows reading temperatures but does not allow control over the pump. See https://github.com/mvdklip/hewalex-geco-protocol/tree/main/docs/PCWU for more information.
+RS485 to USB or Wi-Fi device setup and either eavesdropping on the communication between the G-426 controller and the PCWU or communicating directly to the PCWU over a dedicated RS485 port. Eavesdropping is easier to setup and allows reading temperatures but does not allow control over the pump. See https://github.com/mvdklip/hewalex-geco-protocol/tree/main/docs/PCWU for more information.
 
 ### Solar pumps (ZPS)
 
-RS485 to Wi-Fi device setup and connected to the RS485 port on the backside of the G-422 controller. https://github.com/mvdklip/hewalex-geco-protocol/tree/main/docs/ZPS for more information.
+RS485 to USB or Wi-Fi device setup and connected to the RS485 port on the backside of the G-422 controller. https://github.com/mvdklip/hewalex-geco-protocol/tree/main/docs/ZPS for more information.
 
 ## Installation
 
@@ -55,8 +55,9 @@ sudo /etc/init.d/domoticz.sh restart
 
 | Parameter | Value |
 | :--- | :--- |
-| **IP address** | IP of the RS485 to Wi-Fi device eg. 192.168.1.231 |
-| **Port** | Port of the RS485 to Wi-Fi device eg. 8899 |
+| **Serial Port or IP address** | Serial port device or IP of the RS485 to Wi-Fi device eg. /dev/ttyUSB0 or 192.168.1.231 |
+| **Port** | Port of the RS485 to Wi-Fi device eg. 8899; Set to zero for serial port device |
+| **Serial parameters** | Comma separated serial parameters eg. 38400,8,N,1 |
 | **Device & Mode** | Device type and mode of communication |
 | **Query interval** | How often is data retrieved |
 | **Controller and device Ids** | Controller and device hard and soft ids eg. 1,1;2,2 |

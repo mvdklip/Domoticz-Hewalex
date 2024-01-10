@@ -77,7 +77,7 @@ class PCWU(BaseDevice):
             'WaterPumpON',                                              # Water pump ON (True/False)
             None,
             None,
-            'HeatPumpON',                                               # Heat pump ON (True/False)
+            'HeatPumpON',                                               # Heat pump ON (True/False) - TODO - This is incorrect; sometimes goes to False in the middle of a run.
             None,
             None,
             None,

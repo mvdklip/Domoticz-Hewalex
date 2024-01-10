@@ -8,7 +8,7 @@
 # https://github.com/aelias-eu/hewalex-geco-protocol
 
 """
-<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.7.2">
+<plugin key="Hewalex" name="Hewalex" author="mvdklip" version="0.8.0">
     <description>
         <h2>Hewalex Plugin</h2><br/>
         <h3>Features</h3>
@@ -17,8 +17,9 @@
         </ul>
     </description>
     <params>
-        <param field="Address" label="IP Address" width="200px" required="true"/>
-        <param field="Port" label="Port" width="30px" required="true" default="8899"/>
+        <param field="Address" label="Serial Port or IP Address" width="200px" required="true"/>
+        <param field="Port" label="Port" width="30px" required="true" default="0"/>
+        <param field="Mode1" label="Serial parameters" width="75px" required="true" default="38400,8,N,1"/>
         <param field="Mode2" label="Device & Mode" width="200px" required="true">
             <options>
                 <option label="PCWU - Eavesdropping" value="1" default="true"/>
@@ -66,7 +67,7 @@ from hewalex_geco.devices import PCWU, ZPS
 class BasePlugin:
     enabled = False
     lastPolled = 0
-    baseUrl = None
+    devAddr = None
     maxAttempts = 3
 
     conHardId = 1
@@ -79,6 +80,7 @@ class BasePlugin:
 
     expertMode = False  # Expert mode enabled?
 
+    serial_parameters = { 'baudrate': 38400, 'bytesize': 8, 'parity': 'N', 'stopbits': 1 }
     temp_devices = {}
     switch_devices = {}
     custom_devices = {}
@@ -91,6 +93,11 @@ class BasePlugin:
         return
 
     def onStart(self):
+        if Parameters["Mode6"] == "Debug":
+            Domoticz.Debugging(1)
+        else:
+            Domoticz.Debugging(0)
+
         Domoticz.Debug("onStart called")
 
         self.devMode = int(Parameters["Mode2"])
@@ -100,13 +107,19 @@ class BasePlugin:
         if self.expertMode:
             Domoticz.Debug("Expert mode and devices enabled")
 
-        if Parameters["Mode6"] == "Debug":
-            Domoticz.Debugging(1)
+        if Parameters["Port"] != "0":
+            self.devAddr = "socket://%s:%s" % (Parameters["Address"], Parameters["Port"])
         else:
-            Domoticz.Debugging(0)
+            self.devAddr = Parameters["Address"]
+        Domoticz.Debug("Device address is set to %s" % self.devAddr)
 
-        self.baseUrl = "socket://%s:%s" % (Parameters["Address"], Parameters["Port"])
-        Domoticz.Debug("Base URL is set to %s" % self.baseUrl)
+        serParams = Parameters["Mode1"].split(",")
+        if len(serParams) == 4:
+            self.serial_parameters["baudrate"] = int(serParams[0])
+            self.serial_parameters["bytesize"] = int(serParams[1])
+            self.serial_parameters["parity"] = serParams[2]
+            self.serial_parameters["stopbits"] = int(serParams[3])
+        Domoticz.Debug("Serial parameters are set to %d,%d,%s,%d" % (self.serial_parameters["baudrate"], self.serial_parameters["bytesize"], self.serial_parameters["parity"], self.serial_parameters["stopbits"]))
 
         allIds = Parameters["Mode4"].split(";")
         if len(allIds) == 2:
@@ -114,12 +127,12 @@ class BasePlugin:
             if len(conIds) == 2:
                 self.conHardId = int(conIds[0])
                 self.conSoftId = int(conIds[1])
-                Domoticz.Debug("Controller Ids set to %d, %d" % (self.conHardId, self.conSoftId))
             devIds = allIds[1].split(',')
             if len(devIds) == 2:
                 self.devHardId = int(devIds[0])
                 self.devSoftId = int(devIds[1])
-                Domoticz.Debug("Device Ids set to %d, %d" % (self.devHardId, self.devSoftId))
+        Domoticz.Debug("Controller Ids are set to %d,%d" % (self.conHardId, self.conSoftId))
+        Domoticz.Debug("Device Ids are set to %d,%d" % (self.devHardId, self.devSoftId))
 
         # PCWU devices
         if self.devMode == 1 or self.devMode == 2:
@@ -298,7 +311,7 @@ class BasePlugin:
                     if attempt > 1:
                         Domoticz.Debug("Previous attempt failed, trying again...")
                 else:
-                    Domoticz.Error("Failed to retrieve data from %s, cancelling..." % self.baseUrl)
+                    Domoticz.Error("Failed to retrieve data from %s, cancelling..." % self.devAddr)
                     break
                 attempt += 1
 
@@ -309,7 +322,7 @@ class BasePlugin:
                         SendCommand(self, 'readStatusRegisters')
                         SendCommand(self, 'readConfigRegisters')
                 except Exception as e:
-                    Domoticz.Log("Exception from %s; %s" % (self.baseUrl, e))
+                    Domoticz.Log("Exception from %s; %s" % (self.devAddr, e))
                     self.devReady = False
                 else:
                     break
@@ -406,7 +419,7 @@ def PCWUStatus(mp):
             devStatus = PCWU_STATUS_WAITING
         elif devError != PCWU_ERROR_NONE:
             devStatus = PCWU_STATUS_ERROR
-        elif mp['HeatPumpON']:
+        elif mp['FanON']:
             devStatus = PCWU_STATUS_RUNNING
         else:
             devStatus = PCWU_STATUS_IDLE
@@ -516,7 +529,10 @@ def SetupExpertDevicesZPS(plugin):
     plugin.x_custom_devices = {}
 
 def SendCommand(plugin, command, *args, **kwargs):
-    ser = serial.serial_for_url(plugin.baseUrl)
+    if plugin.devAddr.startswith("socket://"):
+        ser = serial.serial_for_url(plugin.devAddr)
+    else:
+        ser = serial.Serial(plugin.devAddr, **plugin.serial_parameters)
     dev = None
 
     if (plugin.devMode == 1) or (plugin.devMode == 2):
